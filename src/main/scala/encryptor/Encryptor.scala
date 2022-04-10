@@ -16,6 +16,12 @@ object Encryptor {
     os.flush()
   }
 
+  def decryptTo(is: InputStream, os: OutputStream): Unit = {
+    val decrypted = decrypt(is.readAllBytes())
+    os.write(decrypted)
+    os.flush()
+  }
+
   def encryptFileTo(from: String, to: String): Unit = {
     cryptFileTo(encryptFile, from, to)
   }

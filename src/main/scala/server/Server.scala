@@ -1,7 +1,7 @@
 package filesharer
 package server
 
-import java.io.{FileOutputStream, PrintStream, InputStream, File}
+import java.io.{FileOutputStream, FileInputStream, PrintStream, InputStream, File}
 import java.net.ServerSocket
 import scala.io.BufferedSource
 
@@ -14,21 +14,33 @@ object Server {
     val s = server.accept()
     val in = s.getInputStream()
 
-    println("Received communication")
-
-    val file = new File("testfiles/server/encrypted.txt")
-    val fs = new FileOutputStream(file)
+    val receiveFile = new File("testfiles/server/encrypted.txt")
+    val fos = new FileOutputStream(receiveFile)
 
     println("Server opened file")
-    
-    val bytes = in.readAllBytes()
-    println("Server read from client")
-    fs.write(bytes)
-    fs.flush()
-    fs.close()
 
-    println("Server closed file")
-    
+    while (in.available() < 1) { Thread.sleep(100) }
+    val bytes = in.readNBytes(in.available())
+    println("Server read from client")
+
+    fos.write(bytes)
+    fos.flush()
+    fos.close()
+
+    println("Server wrote to file")
+
+    val sendFile = new File("testfiles/server/encrypted.txt")
+    val fis = new FileInputStream(receiveFile)
+
+    println("Server opened file for sending")
+
+    val out = s.getOutputStream()
+    out.write(fis.readAllBytes())
+    out.flush()
+
+    println("Server sent file")
+
+    fis.close()
     s.close()
 
     println("Server stopping execution")
