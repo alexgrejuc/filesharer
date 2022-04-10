@@ -1,7 +1,7 @@
 package filesharer
 package encryptor
 
-import java.io.{File, FileInputStream, FileOutputStream}
+import java.io.{File, FileInputStream, FileOutputStream, InputStream, OutputStream}
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
@@ -9,6 +9,12 @@ import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 object Encryptor {
   val key = "0123456789ABCDEF".getBytes("UTF-8")
   val initVector = "0123456789ABCDEF".getBytes("UTF-8")
+
+  def encryptTo(is: InputStream, os: OutputStream): Unit = {
+    val encrypted = encrypt(is.readAllBytes())
+    os.write(encrypted)
+    os.flush()
+  }
 
   def encryptFileTo(from: String, to: String): Unit = {
     cryptFileTo(encryptFile, from, to)
