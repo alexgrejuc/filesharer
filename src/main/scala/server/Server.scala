@@ -6,6 +6,13 @@ import java.net.ServerSocket
 import scala.io.BufferedSource
 
 object Server {
+  // TODO: get from config file
+  val storagePath = "testfiles/server/"
+
+  def wait(in: InputStream): Unit = {
+    while (in.available() < 1) { Thread.sleep(100) }
+  }
+
   def run(): Unit = {
     val server = new ServerSocket(9999)
 
@@ -17,12 +24,12 @@ object Server {
     var clientConnected = true
 
     while (clientConnected) {
-      while (in.available() < 1) {Thread.sleep(100)}
+      wait(in)
       val mode = in.read()
       println("Received mode from client: " + mode.toString())
       
       if (mode == 0) {
-        while (in.available() < 1) {Thread.sleep(100)}
+        wait(in)
 
         // wrap in DataStream to read entire int
         val dis = new DataInputStream(in)
@@ -30,12 +37,12 @@ object Server {
 
         println("Server receiving file of size: " + size)
 
-        val receiveFile = new File("testfiles/server/encrypted.txt")
+        val receiveFile = new File(storagePath + "encrypted.txt")
         val fos = new FileOutputStream(receiveFile)
 
         println("Server opened file")
 
-        while (in.available() < 1) {Thread.sleep(100)}
+        wait(in)
 
         println("Server received data")
 
