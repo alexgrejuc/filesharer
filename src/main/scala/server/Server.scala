@@ -13,6 +13,15 @@ object Server {
     while (in.available() < 1) { Thread.sleep(100) }
   }
 
+  def readInfo(in: InputStream): (String, Int) = {
+    val dis = new DataInputStream(in)
+
+    val name = dis.readUTF()
+    val size = dis.readInt()
+
+    (name, size)
+  }
+
   def run(): Unit = {
     val server = new ServerSocket(9999)
 
@@ -25,19 +34,20 @@ object Server {
 
     while (clientConnected) {
       wait(in)
-      val mode = in.read()
+
+      val dis = new DataInputStream(in)
+      val mode = dis.readInt()
+
       println("Received mode from client: " + mode.toString())
       
       if (mode == 0) {
         wait(in)
 
-        // wrap in DataStream to read entire int
-        val dis = new DataInputStream(in)
-        val size = dis.readInt()
+        val (name, size) = readInfo(in)
 
-        println("Server receiving file of size: " + size)
+        println(s"Server receiving file named $name of size: $size")
 
-        val receiveFile = new File(storagePath + "encrypted.txt")
+        val receiveFile = new File(storagePath + name)
         val fos = new FileOutputStream(receiveFile)
 
         println("Server opened file")
@@ -58,7 +68,10 @@ object Server {
       else if (mode == 1) {
         println("Server sending")
 
-        val sendFile = new File("testfiles/server/encrypted.txt")
+        val dis = new DataInputStream(in)
+        val fileName = dis.readUTF()
+
+        val sendFile = new File(storagePath + fileName)
         val fis = new FileInputStream(sendFile)
 
         println("Server opened file for sending")

@@ -11,8 +11,13 @@ object Main {
     }
     else if (args.length == 3 && args(0).toLowerCase == "client") {
       val socket = Client.connect()
-      Client.send(args(1), socket)
-      Client.request(args(2), socket)
+
+      val sendFileName = args(1).split('/').last
+      val requestFileName = args(1).split('/').last
+
+      Client.send(sendFileName, args(1), socket)
+      Client.request(requestFileName, args(2), socket)
+
       Client.disconnect(socket)
     }
   }

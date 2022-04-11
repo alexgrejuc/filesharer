@@ -10,6 +10,7 @@ object Encryptor {
   val key = "0123456789ABCDEF".getBytes("UTF-8")
   val initVector = "0123456789ABCDEF".getBytes("UTF-8")
 
+  // Encrypts a file, writes the length of the encrypted version to a stream and sends it over the stream
   def encryptTo(is: InputStream, os: OutputStream): Unit = {
     val encrypted = encrypt(is.readNBytes(is.available()))
 
