@@ -7,22 +7,45 @@ import scala.io.BufferedSource
 import encryptor.Encryptor
 
 object Client {
-  def send(fileName: String): Unit = {
+  def connect(): Socket = {
     println("Client attempting connection")
-
     val s = new Socket(InetAddress.getByName("localhost"), 9999)
-
     println("Client connected")
-    
-    val sendFile = new File(fileName)
-    val fis = new FileInputStream(sendFile)
-    
+    s
+  }
+
+  def disconnect(s: Socket): Unit = {
+    val os = s.getOutputStream()
+
+    // Tell the server the client is disconnecting
+    os.write(3)
+    os.flush()
+    s.close()
+
+    println("Client disconnected")
+  }
+
+  def send(fileName: String, s: Socket): Unit = {
+    println("Client sending")
     val out = s.getOutputStream()
 
-    Encryptor.encryptTo(fis, out)
+    out.write(0)
     out.flush()
 
+    val sendFile = new File(fileName)
+    val fis = new FileInputStream(sendFile)
+
+    Encryptor.encryptTo(fis, out)
+
+    fis.close()
     println("Client sent encrypted version of " + fileName)
+  }
+
+  def request(fileName: String, s: Socket) : Unit = {
+    println("Client requesting")
+    val out = s.getOutputStream()
+    out.write(1)
+    out.flush()
 
     val in = s.getInputStream()
 
@@ -36,8 +59,5 @@ object Client {
     Encryptor.decryptTo(in, fos)
     fos.close()
     println("Client wrote to file")
-
-    println("Client finishing execution")
-    s.close()
   }
 }
