@@ -1,111 +1,93 @@
 package filesharer
 package server
 
-import java.io.{DataInputStream, File, FileInputStream, FileOutputStream, InputStream, OutputStream, PrintStream}
+import java.io.{BufferedInputStream, BufferedOutputStream, DataInputStream, DataOutputStream, File, FileInputStream, FileOutputStream, InputStream, ObjectOutputStream, OutputStream, PrintStream}
 import java.net.{ServerSocket, Socket}
 import scala.io.BufferedSource
+import library.Utils
 
 object Server {
   // TODO: get from config file
   val storagePath = "testfiles/server/"
 
-  def wait(in: InputStream): Unit = {
-    while (in.available() < 1) { Thread.sleep(100) }
-  }
-
-  def readInfo(in: InputStream): (String, Int) = {
+  def readInfo(in: InputStream): String = {
     val dis = new DataInputStream(in)
-
-    val name = dis.readUTF()
-    val size = dis.readInt()
-
-    (name, size)
+    dis.readUTF()
   }
 
-  def receive(in: InputStream): Unit = {
-    wait(in)
+  def receive(dataSS: ServerSocket, out: DataOutputStream): Unit = {
+    val dataSocket = dataSS.accept()
+    val in = new DataInputStream(new BufferedInputStream(dataSocket.getInputStream()))
 
-    val (name, size) = readInfo(in)
+    Utils.log("Server waiting to receive")
+    Utils.wait(in)
 
-    println(s"Server receiving file named $name of size: $size")
+    val name = readInfo(in)
+
+    Utils.log(s"Server receiving file named $name")
 
     val receiveFile = new File(storagePath + name)
     val fos = new FileOutputStream(receiveFile)
 
-    println("Server opened file")
+    Utils.log("Server opened file")
 
-    wait(in)
+    Utils.wait(in)
 
-    println("Server received data")
+    Utils.log("Server received data")
 
-    val bytes = in.readNBytes(size)
-    println("Server read from client")
+    val lengthRead = in.transferTo(fos)
 
-    fos.write(bytes)
-    fos.flush()
     fos.close()
 
-    println("Server wrote to file")
-  }
+    Utils.log("Server wrote to file")
 
-  def send(in: InputStream, out: OutputStream): Unit = {
-    println("Server sending")
-
-    val dis = new DataInputStream(in)
-    val fileName = dis.readUTF()
-
-    val sendFile = new File(storagePath + fileName)
-    val fis = new FileInputStream(sendFile)
-
-    println("Server opened file for sending")
-
-    out.write(fis.readAllBytes())
+    // tell client the data was properly received
+    out.writeLong(lengthRead)
     out.flush()
 
-    println("Server sent file")
-
-    fis.close()
+    Utils.log("Server notified client of success")
+    in.close()
+    dataSocket.close()
   }
 
   def disconnect(s: Socket): Unit = {
     s.close()
-    println("Client disconnected")
+    Utils.log("Client disconnected")
   }
 
   def run(): Unit = {
-    val server = new ServerSocket(9999)
+    val control = new ServerSocket(Utils.controlPort)
+    val data = new ServerSocket(Utils.dataPort)
 
-    println("Server running")
+    Utils.log("Server running")
 
-    val s = server.accept()
-    val in = s.getInputStream()
+    val controlSocket = control.accept()
+
+    val cis = new DataInputStream(new BufferedInputStream(controlSocket.getInputStream()))
+    val cos = new DataOutputStream(new BufferedOutputStream(controlSocket.getOutputStream()))
+
+    Utils.log("Server accepted a client")
 
     var clientConnected = true
 
     while (clientConnected) {
-      wait(in)
+      Utils.log("\nServer waiting on client command")
+      Utils.wait(cis)
 
-      val dis = new DataInputStream(in)
-      val mode = dis.readInt()
+      val mode = cis.readInt()
 
-      println("Received mode from client: " + mode.toString())
-      
-      if (mode == 0) {
-        receive(in)
-      }
-      else if (mode == 1) {
-        send(in, s.getOutputStream())
-      }
-      else if (mode == 2) {
-        // todo: list files
-      }
-      else if (mode == 3) {
-        disconnect(s)
-        clientConnected = false
+      Utils.log(s"Server received mode $mode from client")
+
+      mode match {
+        case 0 => receive(data, cos)
+        case 3 => clientConnected = false
+        case _ => Utils.logError("Unknown command received from client")
       }
     }
 
-    println("Server stopping execution")
-    server.close()
+    controlSocket.close()
+    control.close()
+    data.close()
+    Utils.log("Server stopping execution")
   }
 }

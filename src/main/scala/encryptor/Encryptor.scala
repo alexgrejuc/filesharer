@@ -6,20 +6,24 @@ import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 
+import library.Utils
+
 object Encryptor {
   val key = "0123456789ABCDEF".getBytes("UTF-8")
   val initVector = "0123456789ABCDEF".getBytes("UTF-8")
 
   // Encrypts a file, writes the length of the encrypted version to a stream and sends it over the stream
-  def encryptTo(is: InputStream, os: OutputStream): Unit = {
+  // todo: return long
+  def encryptTo(is: InputStream, os: OutputStream): Int = {
     val encrypted = encrypt(is.readNBytes(is.available()))
 
     val dos = new DataOutputStream(os)
-    dos.writeInt(encrypted.length)
+    //dos.writeInt(encrypted.length)
     os.write(encrypted)
     os.flush()
 
-    println("Encrypted file size: " + encrypted.length)
+    Utils.log("Encrypted file size: " + encrypted.length)
+    encrypted.length
   }
 
   def decryptTo(is: InputStream, os: OutputStream): Unit = {
