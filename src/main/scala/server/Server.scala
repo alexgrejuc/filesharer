@@ -1,7 +1,7 @@
 package filesharer
 package server
 
-import java.io.{BufferedInputStream, BufferedOutputStream, DataInputStream, DataOutputStream, File, FileInputStream, FileOutputStream, InputStream, ObjectOutputStream, OutputStream, PrintStream}
+import java.io.{BufferedInputStream, BufferedOutputStream, Closeable, DataInputStream, DataOutputStream, File, FileInputStream, FileOutputStream, IOException, InputStream, ObjectOutputStream, OutputStream, PrintStream}
 import java.net.{ServerSocket, Socket}
 import scala.io.BufferedSource
 import library.Utils
@@ -17,7 +17,7 @@ object Server {
 
   def receive(dataSS: ServerSocket, out: DataOutputStream): Unit = {
     val dataSocket = dataSS.accept()
-    val in = new DataInputStream(new BufferedInputStream(dataSocket.getInputStream()))
+    val in = new DataInputStream(new BufferedInputStream(dataSocket.getInputStream))
 
     Utils.log("Server waiting to receive")
     Utils.wait(in)
@@ -50,44 +50,52 @@ object Server {
     dataSocket.close()
   }
 
-  def disconnect(s: Socket): Unit = {
-    s.close()
-    Utils.log("Client disconnected")
-  }
-
   def run(): Unit = {
-    val control = new ServerSocket(Utils.controlPort)
-    val data = new ServerSocket(Utils.dataPort)
+    var control: ServerSocket = null
+    var data: ServerSocket = null
+    var controlSocket: Socket = null
 
-    Utils.log("Server running")
+    try {
+      control = new ServerSocket(Utils.controlPort)
+      data = new ServerSocket(Utils.dataPort)
 
-    val controlSocket = control.accept()
+      Utils.log("Server running")
 
-    val cis = new DataInputStream(new BufferedInputStream(controlSocket.getInputStream()))
-    val cos = new DataOutputStream(new BufferedOutputStream(controlSocket.getOutputStream()))
+      controlSocket = control.accept()
 
-    Utils.log("Server accepted a client")
+      val cis = new DataInputStream(new BufferedInputStream(controlSocket.getInputStream))
+      val cos = new DataOutputStream(new BufferedOutputStream(controlSocket.getOutputStream))
 
-    var clientConnected = true
+      Utils.log("Server accepted a client")
 
-    while (clientConnected) {
-      Utils.log("\nServer waiting on client command")
-      Utils.wait(cis)
+      var clientConnected = true
 
-      val mode = cis.readInt()
+      while (clientConnected) {
+        Utils.log("\nServer waiting on client command")
+        Utils.wait(cis)
 
-      Utils.log(s"Server received mode $mode from client")
+        val mode = cis.readInt()
 
-      mode match {
-        case 0 => receive(data, cos)
-        case 3 => clientConnected = false
-        case _ => Utils.logError("Unknown command received from client")
+        Utils.log(s"Server received mode $mode from client")
+
+        mode match {
+          case 0 => receive(data, cos)
+          case 3 => clientConnected = false
+          case _ => Utils.logError("Unknown command received from client")
+        }
       }
+    } catch {
+      case io: IOException =>
+        io.printStackTrace
+        Utils.logError(s"Error connecting: ${io.getMessage}")
+      case er: Exception =>
+        er.printStackTrace
+        Utils.logError(s"Unknown error: ${er.getMessage}")
+    }
+    finally {
+      List(controlSocket, control, data).map(r => Utils.tryClose(r))
     }
 
-    controlSocket.close()
-    control.close()
-    data.close()
     Utils.log("Server stopping execution")
   }
 }

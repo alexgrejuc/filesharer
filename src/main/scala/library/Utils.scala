@@ -1,7 +1,7 @@
 package filesharer
 package library
 
-import java.io.InputStream
+import java.io.{Closeable, IOException, InputStream}
 
 object Utils {
   // TODO: load from config
@@ -19,5 +19,15 @@ object Utils {
   
   def logError(s: String): Unit = {
     System.err.println(s)
+  }
+
+  def tryClose(c: Closeable): Unit = {
+    if (c != null) {
+      try {
+        c.close()
+      } catch {
+        case ioe: IOException => Utils.logError(s"Error closing resource: ${ioe.printStackTrace}")
+      }
+    }
   }
 }
