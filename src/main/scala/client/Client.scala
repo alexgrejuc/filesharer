@@ -11,6 +11,8 @@ import javax.net.ssl.{SSLSocket, SSLSocketFactory}
 
 class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: String, trustStorePassword: String) {
   var controlSocket: SSLSocket = null
+  val key = "0123456789ABCDEF".getBytes("UTF-8") // TODO: get from user
+  val initVector = "0123456789ABCDEF".getBytes("UTF-8") // TODO: generate and store
 
   def connect(): Unit = {
     System.setProperty("javax.net.ssl.trustStore", trustStorePath)
@@ -61,19 +63,19 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     val sendFile = new File(file.getAbsolutePath())
     val fis = new BufferedInputStream(new FileInputStream(sendFile))
 
-    val sentLength = Encryptor.encryptTo(fis, dos)
+    val hash = Encryptor.encryptAndHash(fis, dos, initVector, key)
     dos.close()
     fis.close()
-    Utils.log(s"Sent $sentLength bytes")
+    Utils.log(s"Sent file with hash ${new String(hash)}")
 
-    val dis = new DataInputStream(new BufferedInputStream(controlSocket.getInputStream))
-    val receivedLength = dis.readLong()
+    val cis = new BufferedInputStream(controlSocket.getInputStream)
+    val receivedHash = cis.readNBytes(32)
 
-    if (receivedLength == sentLength) {
-      Utils.log(s"Client notified that server received all $receivedLength bytes")
+    if (receivedHash.sameElements(hash)) {
+      Utils.log(s"Client notified that server received file with matching hash")
     }
     else {
-      Utils.logError("Client failed to send")
+      Utils.logError(s"Hash mismatch.\nClient: ${new String(hash)}\nServer: ${new String(receivedHash)}")
     }
   }
 }

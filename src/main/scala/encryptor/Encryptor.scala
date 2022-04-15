@@ -5,82 +5,81 @@ import java.io.{DataOutputStream, File, FileInputStream, FileOutputStream, Input
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
-
 import library.Utils
 
+import java.security.MessageDigest
+
 object Encryptor {
-  val key = "0123456789ABCDEF".getBytes("UTF-8")
-  val initVector = "0123456789ABCDEF".getBytes("UTF-8")
+  // Encrypts data from an input stream to an output stream given a cipher in encryption mode.
+  // Returns a SHA-256 hash of the encrypted data.
+  def encryptAndHashWith(is: InputStream, os: OutputStream, cipher: Cipher): Array[Byte] = {
+    val sha256 = MessageDigest.getInstance("SHA-256")
 
-  // Encrypts a file, writes the length of the encrypted version to a stream and sends it over the stream
-  // todo: return long
-  def encryptTo(is: InputStream, os: OutputStream): Int = {
-    val encrypted = encrypt(is.readNBytes(is.available()))
+    val buffer = new Array[Byte](8192)
+    var count = is.read(buffer)
 
-    val dos = new DataOutputStream(os)
-    //dos.writeInt(encrypted.length)
+    // Stream encrypt using a buffer instead of loading it all in memory
+    // Steps: read data, encrypt it, hash encrypted data, write encrypted data
+    while (count != -1) {
+      val encrypted = cipher.update(buffer, 0, count)
+      os.write(encrypted)
+      os.flush()
+      sha256.update(encrypted)
+      count = is.read(buffer)
+    }
+
+    val encrypted = cipher.doFinal()
     os.write(encrypted)
     os.flush()
+    sha256.update(encrypted)
 
-    Utils.log("Encrypted file size: " + encrypted.length)
-    encrypted.length
+    sha256.digest()
   }
 
-  def decryptTo(is: InputStream, os: OutputStream): Unit = {
-    val decrypted = decrypt(is.readNBytes(is.available()))
-    os.write(decrypted)
-    os.flush()
-  }
-
-  def encryptFileTo(from: String, to: String): Unit = {
-    cryptFileTo(encryptFile, from, to)
-  }
-
-  def decryptFileTo(from: String, to: String): Unit = {
-    cryptFileTo(decryptFile, from, to)
-  }
-
-  def cryptFileTo(f: (FileInputStream, FileOutputStream) => Unit, from: String, to: String): Unit = {
-    val src = new File(from)
-    val dst = new File(to)
-    dst.createNewFile()
-
-    val srcs = new FileInputStream(src)
-    val dsts = new FileOutputStream(dst)
-
-    f(srcs, dsts)
-  }
-
-  def encryptFile(in: FileInputStream, out: FileOutputStream): Unit = {
-    val encrypted = encrypt(in.readAllBytes())
-    out.write(encrypted)
-  }
-
-  def encrypt(bytes: Array[Byte]): Array[Byte] = {
+  // Encrypts data from an input stream to an output stream with AES/CBC/PKCS5PADDING
+  // Returns a SHA-256 hash of the encrypted data.
+  def encryptAndHash(is: InputStream, os: OutputStream, initVector: Array[Byte], key: Array[Byte]): Array[Byte] = {
     val iv = new IvParameterSpec(initVector)
     val skeySpec = new SecretKeySpec(key, "AES")
-
     val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
     cipher.init(Cipher.ENCRYPT_MODE, skeySpec, iv)
 
-    // TODO: verify encrypt/decode order
-    val encrypted = cipher.doFinal(bytes)
-    Base64.getEncoder.encode(encrypted)
+    encryptAndHashWith(is, os, cipher)
   }
 
-  def decryptFile(in: FileInputStream, out: FileOutputStream): Unit = {
-    val decrypted = decrypt(in.readAllBytes())
-    out.write(decrypted)
+  // Decrypts data from an input stream to an output stream given a cipher in decryption mode.
+  // Returns a SHA-256 hash of the encrypted data.
+  def hashAndDecryptWith(is: InputStream, os: OutputStream, cipher: Cipher): Array[Byte] = {
+    val sha256 = MessageDigest.getInstance("SHA-256")
+
+    // Stream decrypt using a buffer instead of loading it all in memory
+    // Steps: read encrypted data, hash it, decrypt it, write decrypted data
+    val buffer = new Array[Byte](8192)
+    var count = is.read(buffer)
+
+    while (count != -1) {
+      sha256.update(buffer.slice(0, count))
+      val decrypted = cipher.update(buffer.slice(0, count))
+      os.write(decrypted)
+      os.flush()
+      count = is.read(buffer)
+    }
+
+    val decrypted = cipher.doFinal()
+    os.write(decrypted)
+    os.flush()
+
+    sha256.digest()
   }
 
-  def decrypt(bytes: Array[Byte]): Array[Byte] = {
+  // Decrypts data from an input stream to an output stream with AES/CBC/PKCS5PADDING
+  // Returns a SHA-256 hash of the encrypted data.
+  def hashAndDecrypt(is: InputStream, os: OutputStream, initVector: Array[Byte], key: Array[Byte]): Array[Byte] = {
     val iv = new IvParameterSpec(initVector)
     val skeySpec = new SecretKeySpec(key, "AES")
-
-    // TODO: verify decode/decrypt order
     val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
     cipher.init(Cipher.DECRYPT_MODE, skeySpec, iv)
-    val decoded = Base64.getDecoder.decode(bytes)
-    cipher.doFinal(decoded)
+
+    hashAndDecryptWith(is, os, cipher)
   }
 }

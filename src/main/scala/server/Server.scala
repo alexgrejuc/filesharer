@@ -24,9 +24,14 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     dis.readUTF()
   }
 
+  def writeAndHash(b: Byte, outputStream: DataOutputStream, messageDigest: MessageDigest): Unit = {
+    outputStream.writeByte(b)
+    messageDigest.update(b)
+  }
+
   def receive(dataSS: ServerSocket, controlIn: DataInputStream, controlOut: DataOutputStream): Unit = {
     val dataSocket = dataSS.accept()
-    val dataIn = new DataInputStream(new BufferedInputStream(dataSocket.getInputStream))
+    val dataIn =  new BufferedInputStream(dataSocket.getInputStream)
 
     Utils.log("Server waiting to receive file name")
     Utils.wait(controlIn)
@@ -34,20 +39,40 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     Utils.log(s"Server receiving file named $name")
 
     val receiveFile = new File(storagePath + name)
-    val fos = new FileOutputStream(receiveFile)
+    val fos = new DataOutputStream(new FileOutputStream(receiveFile))
     Utils.log("Server opened file")
 
     Utils.log("Server waiting to receive data")
     Utils.wait(dataIn)
     Utils.log("Server received data")
 
+    val sha256 = MessageDigest.getInstance("SHA-256")
+
+    Iterator.continually(dataIn.read())
+      .takeWhile(_ != -1)
+      .foreach(i => writeAndHash(i.toByte, fos, sha256))
+
+    fos.close()
+    val hash = sha256.digest()
+
+    controlOut.write(hash)
+    controlOut.flush()
+    Utils.log(s"Server sent hash to client: ${new String(hash)}")
+
+    /*
     val lengthRead = dataIn.transferTo(fos)
     fos.close()
     Utils.log("Server wrote to file")
 
+    val bytes = dataIn.readAllBytes()
+    Utils.log(s"Server computing hash of ${bytes.length}")
+    val sha256 = MessageDigest.getInstance("SHA-256")
+    sha256.digest(bytes)
+    println("Server computed hash")
+
     // tell client the data was properly received
     controlOut.writeLong(lengthRead)
-    controlOut.flush()
+    controlOut.flush()*/
     Utils.log("Server notified client of success")
 
     dataIn.close()
