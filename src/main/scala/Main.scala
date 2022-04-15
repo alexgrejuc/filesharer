@@ -9,11 +9,11 @@ import java.io.{File, FileInputStream}
 import java.net.Socket
 
 object Main {
-  def sendFiles(filePaths: Array[String], clientControl: Socket): Unit = {
+  def sendFiles(filePaths: Array[String], client: Client): Unit = {
     for(fp <- filePaths){
       val f = new File(fp)
       if (f.exists() && !f.isDirectory() && f.canRead()) {
-        Client.send(f, clientControl, Utils.hostName, Utils.dataPort)
+        client.send(f)
       }
       else {
         Utils.logError(s"Could not access file $fp")
@@ -30,17 +30,19 @@ object Main {
     println()
 
     if (args.length == 1 && args(0).toLowerCase() == "server") {
-      Server.run()
+      val server = new Server(Utils.controlPort, Utils.dataPort, "testfiles/server/", "/home/grejuca/IdeaProjects/FileSharer/keystore", "passphrase")
+      server.run()
     }
     else if (args.length >= 3 && args(0).toLowerCase() == "client") {
-      val control = Client.connect(Utils.hostName, Utils.controlPort)
+      val client = new Client("localhost", Utils.controlPort, Utils.dataPort, "/home/grejuca/IdeaProjects/FileSharer/keystore", "passphrase")
+      client.connect()
 
       args(1).toLowerCase match {
-        case "send" => sendFiles(args.drop(2), control)
+        case "send" => sendFiles(args.drop(2), client)
         case _      => logInvalidArgs()
       }
 
-      Client.disconnect(control)
+      client.disconnect()
     }
     else{
       logInvalidArgs()

@@ -7,11 +7,18 @@ import scala.io.BufferedSource
 import encryptor.Encryptor
 import library.Utils
 
-object Client {
-  def connect(host: String, controlPort: Int): Socket = {
-    val controlSocket = new Socket(InetAddress.getByName(host), controlPort)
+import javax.net.ssl.{SSLSocket, SSLSocketFactory}
+
+class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: String, trustStorePassword: String) {
+  var controlSocket: SSLSocket = null
+
+  def connect(): Unit = {
+    System.setProperty("javax.net.ssl.trustStore", trustStorePath)
+    System.setProperty("javax.net.ssl.trustStorePassword", trustStorePassword)
+    controlSocket = SSLSocketFactory.getDefault().createSocket(hostName, controlPort).asInstanceOf[SSLSocket]
+    controlSocket.setEnabledProtocols(Utils.controlProtocols)
+    controlSocket.setEnabledCipherSuites(Utils.controlCipherSuites)
     Utils.log("Client connected to server")
-    controlSocket
   }
   
   def notifyDisconnect(os: OutputStream): Unit = {
@@ -20,34 +27,36 @@ object Client {
     dos.flush()
   }
 
-  def disconnect(s: Socket): Unit = {
-    val os = s.getOutputStream()
+  def disconnect(): Unit = {
+    val os = controlSocket.getOutputStream()
     notifyDisconnect(os)
-    s.close()
+    os.close()
     Utils.log("Client disconnected")
   }
 
-  def connectDataSocket(host: String, port: Int): Socket = {
-    new Socket(InetAddress.getByName(host), port)
+  def connectDataSocket(): Socket = {
+    new Socket(InetAddress.getByName(hostName), dataPort)
   }
   
-  def notifySend(fileName: String, data: OutputStream, control: OutputStream): Unit = {
-    val dos = new DataOutputStream(data)
+  def notifySend(fileName: String, control: OutputStream): Unit = {
     val cos = new DataOutputStream(control)
 
+    Utils.log("Client notifying server that it would like to send")
     cos.writeInt(0) // tell the server the client would like to send a file
+    Utils.log("Client sent command")
+
+    cos.writeUTF(fileName)
     cos.flush()
-    dos.writeUTF(fileName)
-    dos.flush()
+    Utils.log("Client notified server it is sending")
   }
 
-  def send(file: File, controlSocket: Socket, host: String, dataPort: Int): Unit = {
+  def send(file: File): Unit = {
     Utils.log("Client sending")
-    val dataSocket = connectDataSocket(host, dataPort)
+    val dataSocket = connectDataSocket()
     val dos = new BufferedOutputStream(dataSocket.getOutputStream())
     val cos = new BufferedOutputStream(controlSocket.getOutputStream())
 
-    notifySend(file.getName(), dos, cos)
+    notifySend(file.getName(), cos)
 
     val sendFile = new File(file.getAbsolutePath())
     val fis = new BufferedInputStream(new FileInputStream(sendFile))
@@ -58,7 +67,6 @@ object Client {
     Utils.log(s"Sent $sentLength bytes")
 
     val dis = new DataInputStream(new BufferedInputStream(controlSocket.getInputStream))
-    Utils.wait(dis)
     val receivedLength = dis.readLong()
 
     if (receivedLength == sentLength) {

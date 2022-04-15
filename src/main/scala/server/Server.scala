@@ -3,61 +3,65 @@ package server
 
 import java.io.{BufferedInputStream, BufferedOutputStream, Closeable, DataInputStream, DataOutputStream, File, FileInputStream, FileOutputStream, IOException, InputStream, ObjectOutputStream, OutputStream, PrintStream}
 import java.net.{ServerSocket, Socket}
+import javax.net.ssl.{SSLServerSocket, SSLServerSocketFactory}
 import scala.io.BufferedSource
 import library.Utils
 
-object Server {
-  // TODO: get from config file
-  val storagePath = "testfiles/server/"
+import java.security.MessageDigest
 
-  def readInfo(in: InputStream): String = {
+class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath: String, keyStorePassword: String) {
+  def connectControl(): SSLServerSocket = {
+    System.setProperty("javax.net.ssl.keyStore", keyStorePath)
+    System.setProperty("javax.net.ssl.keyStorePassword", keyStorePassword)
+    val s = SSLServerSocketFactory.getDefault().createServerSocket(controlPort).asInstanceOf[SSLServerSocket]
+    s.setEnabledProtocols(Utils.controlProtocols)
+    s.setEnabledCipherSuites(Utils.controlCipherSuites)
+    s
+  }
+
+  def readFileName(in: InputStream): String = {
     val dis = new DataInputStream(in)
     dis.readUTF()
   }
 
-  def receive(dataSS: ServerSocket, out: DataOutputStream): Unit = {
+  def receive(dataSS: ServerSocket, controlIn: DataInputStream, controlOut: DataOutputStream): Unit = {
     val dataSocket = dataSS.accept()
-    val in = new DataInputStream(new BufferedInputStream(dataSocket.getInputStream))
+    val dataIn = new DataInputStream(new BufferedInputStream(dataSocket.getInputStream))
 
-    Utils.log("Server waiting to receive")
-    Utils.wait(in)
-
-    val name = readInfo(in)
-
+    Utils.log("Server waiting to receive file name")
+    Utils.wait(controlIn)
+    val name = readFileName(controlIn)
     Utils.log(s"Server receiving file named $name")
 
     val receiveFile = new File(storagePath + name)
     val fos = new FileOutputStream(receiveFile)
-
     Utils.log("Server opened file")
 
-    Utils.wait(in)
-
+    Utils.log("Server waiting to receive data")
+    Utils.wait(dataIn)
     Utils.log("Server received data")
 
-    val lengthRead = in.transferTo(fos)
-
+    val lengthRead = dataIn.transferTo(fos)
     fos.close()
-
     Utils.log("Server wrote to file")
 
     // tell client the data was properly received
-    out.writeLong(lengthRead)
-    out.flush()
-
+    controlOut.writeLong(lengthRead)
+    controlOut.flush()
     Utils.log("Server notified client of success")
-    in.close()
+
+    dataIn.close()
     dataSocket.close()
   }
 
   def run(): Unit = {
-    var control: ServerSocket = null
+    var control: SSLServerSocket = null
     var data: ServerSocket = null
     var controlSocket: Socket = null
 
     try {
-      control = new ServerSocket(Utils.controlPort)
-      data = new ServerSocket(Utils.dataPort)
+      control = connectControl()
+      data = new ServerSocket(dataPort)
 
       Utils.log("Server running")
 
@@ -72,14 +76,13 @@ object Server {
 
       while (clientConnected) {
         Utils.log("\nServer waiting on client command")
-        Utils.wait(cis)
 
         val mode = cis.readInt()
 
         Utils.log(s"Server received mode $mode from client")
 
         mode match {
-          case 0 => receive(data, cos)
+          case 0 => receive(data, cis, cos)
           case 3 => clientConnected = false
           case _ => Utils.logError("Unknown command received from client")
         }
@@ -99,3 +102,4 @@ object Server {
     Utils.log("Server stopping execution")
   }
 }
+

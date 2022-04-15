@@ -8,6 +8,8 @@ object Utils {
   val hostName = "localhost"
   val controlPort = 9999
   val dataPort = 9998
+  val controlProtocols = Array("TLSv1.3")
+  val controlCipherSuites = Array("TLS_AES_128_GCM_SHA256")
   
   def wait(in: InputStream): Unit = {
     while (in.available() < 1) { Thread.sleep(100) }
