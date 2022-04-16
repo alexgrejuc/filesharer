@@ -30,53 +30,77 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
   }
 
   def receive(dataSS: ServerSocket, controlIn: DataInputStream, controlOut: DataOutputStream): Unit = {
-    val dataSocket = dataSS.accept()
-    val dataIn =  new BufferedInputStream(dataSocket.getInputStream)
+    var dataIn: BufferedInputStream = null
+    var fos: DataOutputStream = null
 
-    Utils.log("Server waiting to receive file name")
-    Utils.wait(controlIn)
-    val name = readFileName(controlIn)
-    Utils.log(s"Server receiving file named $name")
+    try {
+      val dataSocket = dataSS.accept()
+      dataIn = new BufferedInputStream(dataSocket.getInputStream)
 
-    val receiveFile = new File(storagePath + name)
-    val fos = new DataOutputStream(new FileOutputStream(receiveFile))
-    Utils.log("Server opened file")
+      Utils.log("Server waiting to receive file name")
+      Utils.wait(controlIn)
+      val name = readFileName(controlIn)
+      Utils.log(s"Server receiving file named $name")
 
-    Utils.log("Server waiting to receive data")
-    Utils.wait(dataIn)
-    Utils.log("Server received data")
+      val receiveFile = new File(storagePath + name)
+      fos = new DataOutputStream(new FileOutputStream(receiveFile))
+      Utils.log("Server opened file")
 
-    val sha256 = MessageDigest.getInstance("SHA-256")
+      Utils.log("Server waiting to receive data")
+      Utils.wait(dataIn)
+      Utils.log("Server received data")
 
-    Iterator.continually(dataIn.read())
-      .takeWhile(_ != -1)
-      .foreach(i => writeAndHash(i.toByte, fos, sha256))
+      val sha256 = MessageDigest.getInstance("SHA-256")
 
-    fos.close()
-    val hash = sha256.digest()
+      Iterator.continually(dataIn.read())
+        .takeWhile(_ != -1)
+        .foreach(i => writeAndHash(i.toByte, fos, sha256))
 
-    controlOut.write(hash)
-    controlOut.flush()
-    Utils.log(s"Server sent hash to client: ${new String(hash)}")
+      fos.close()
+      val hash = sha256.digest()
 
-    /*
-    val lengthRead = dataIn.transferTo(fos)
-    fos.close()
-    Utils.log("Server wrote to file")
+      controlOut.write(hash)
+      controlOut.flush()
+      Utils.log(s"Server sent hash to client: ${new String(hash)}")
 
-    val bytes = dataIn.readAllBytes()
-    Utils.log(s"Server computing hash of ${bytes.length}")
-    val sha256 = MessageDigest.getInstance("SHA-256")
-    sha256.digest(bytes)
-    println("Server computed hash")
+      Utils.log("Server notified client of success")
+    } catch {
+      case ex: Exception => Utils.logError(s"Error receiving from client ${ex.getMessage}")
+    }
+    finally {
+      List(dataIn, fos).map(r => Utils.tryClose(r))
+    }
+  }
 
-    // tell client the data was properly received
-    controlOut.writeLong(lengthRead)
-    controlOut.flush()*/
-    Utils.log("Server notified client of success")
+  def handleClient(controlSocket: Socket, data: ServerSocket) = {
+    val cis = new DataInputStream(new BufferedInputStream(controlSocket.getInputStream))
+    val cos = new DataOutputStream(new BufferedOutputStream(controlSocket.getOutputStream))
+    var clientConnected = true
 
-    dataIn.close()
-    dataSocket.close()
+    while (clientConnected) {
+      Utils.log("\nServer waiting on client command")
+
+      val mode = try {
+        cis.readInt()
+      } catch {
+        _ => -1
+      }
+
+      Utils.log(s"Server received mode $mode from client")
+
+      mode match {
+        case -1 =>
+          Utils.log("Could not read command from client.")
+          clientConnected = false
+        case 0 => receive(data, cis, cos)
+        case 3 =>
+          Utils.log(s"Client disconnected.")
+          clientConnected = false
+        case _ =>
+          Utils.logError("Unknown command received from client")
+          clientConnected = false
+      }
+    }
   }
 
   def run(): Unit = {
@@ -87,38 +111,18 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     try {
       control = connectControl()
       data = new ServerSocket(dataPort)
-
       Utils.log("Server running")
 
-      controlSocket = control.accept()
-
-      val cis = new DataInputStream(new BufferedInputStream(controlSocket.getInputStream))
-      val cos = new DataOutputStream(new BufferedOutputStream(controlSocket.getOutputStream))
-
-      Utils.log("Server accepted a client")
-
-      var clientConnected = true
-
-      while (clientConnected) {
-        Utils.log("\nServer waiting on client command")
-
-        val mode = cis.readInt()
-
-        Utils.log(s"Server received mode $mode from client")
-
-        mode match {
-          case 0 => receive(data, cis, cos)
-          case 3 => clientConnected = false
-          case _ => Utils.logError("Unknown command received from client")
+      while (true) {
+        controlSocket = control.accept()
+        Utils.log("Server accepted a client")
+        handleClient(controlSocket, data)
+        controlSocket.close()
         }
       }
-    } catch {
-      case io: IOException =>
-        io.printStackTrace
-        Utils.logError(s"Error connecting: ${io.getMessage}")
-      case er: Exception =>
-        er.printStackTrace
-        Utils.logError(s"Unknown error: ${er.getMessage}")
+    catch {
+      case io: IOException => Utils.logError(s"Error connecting: ${io.getMessage}")
+      case er: Exception => Utils.logError(s"Unknown error: ${er.getMessage}")
     }
     finally {
       List(controlSocket, control, data).map(r => Utils.tryClose(r))

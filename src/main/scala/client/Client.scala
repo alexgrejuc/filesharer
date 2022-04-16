@@ -54,6 +54,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
 
   def send(file: File): Unit = {
     Utils.log("Client sending")
+
     val dataSocket = connectDataSocket()
     val dos = new BufferedOutputStream(dataSocket.getOutputStream())
     val cos = new BufferedOutputStream(controlSocket.getOutputStream())
