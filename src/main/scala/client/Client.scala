@@ -64,7 +64,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     val sendFile = new File(file.getAbsolutePath())
     val fis = new BufferedInputStream(new FileInputStream(sendFile))
 
-    val hash = Encryptor.encryptAndHash(fis, dos, initVector, key)
+    val hash = Encryptor.encryptAndHash(fis, dos, key)
     dos.close()
     fis.close()
     Utils.log(s"Sent file with hash ${new String(hash)}")

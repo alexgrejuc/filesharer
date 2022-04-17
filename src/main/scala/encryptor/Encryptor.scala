@@ -7,13 +7,20 @@ import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 import library.Utils
 
-import java.security.MessageDigest
+import java.security.{MessageDigest, SecureRandom}
 
 object Encryptor {
   // Encrypts data from an input stream to an output stream given a cipher in encryption mode.
-  // Returns a SHA-256 hash of the encrypted data.
+  // Prepends the initialization vector to the encrypted data.
+  // Returns a SHA-256 hash of the initialization vector + encrypted data.
   def encryptAndHashWith(is: InputStream, os: OutputStream, cipher: Cipher): Array[Byte] = {
     val sha256 = MessageDigest.getInstance("SHA-256")
+
+    // Write and hash the init vector
+    val initVector = cipher.getIV
+    os.write(initVector)
+    os.flush()
+    sha256.update(initVector)
 
     val buffer = new Array[Byte](8192)
     var count = is.read(buffer)
@@ -36,9 +43,14 @@ object Encryptor {
     sha256.digest()
   }
 
-  // Encrypts data from an input stream to an output stream with AES/CBC/PKCS5PADDING
-  // Returns a SHA-256 hash of the encrypted data.
-  def encryptAndHash(is: InputStream, os: OutputStream, initVector: Array[Byte], key: Array[Byte]): Array[Byte] = {
+  // Encrypts data from an input stream to an output stream with AES/CBC/PKCS5PADDING.
+  // Prepends the initialization vector to the encrypted data
+  // Returns a SHA-256 hash of the initialization vector + encrypted data.
+  def encryptAndHash(is: InputStream, os: OutputStream, key: Array[Byte]): Array[Byte] = {
+    val random = new SecureRandom()
+    val initVector = new Array[Byte](16)
+    random.nextBytes(initVector)
+
     val iv = new IvParameterSpec(initVector)
     val skeySpec = new SecretKeySpec(key, "AES")
     val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
@@ -48,9 +60,11 @@ object Encryptor {
   }
 
   // Decrypts data from an input stream to an output stream given a cipher in decryption mode.
-  // Returns a SHA-256 hash of the encrypted data.
+  // Assumes the initialization vector precedes the encrypted data in the stream.
+  // Returns a SHA-256 hash of the prepended initialization vector and encrypted data.
   def hashAndDecryptWith(is: InputStream, os: OutputStream, cipher: Cipher): Array[Byte] = {
     val sha256 = MessageDigest.getInstance("SHA-256")
+    sha256.update(cipher.getIV)
 
     // Stream decrypt using a buffer instead of loading it all in memory
     // Steps: read encrypted data, hash it, decrypt it, write decrypted data
@@ -73,8 +87,10 @@ object Encryptor {
   }
 
   // Decrypts data from an input stream to an output stream with AES/CBC/PKCS5PADDING
-  // Returns a SHA-256 hash of the encrypted data.
-  def hashAndDecrypt(is: InputStream, os: OutputStream, initVector: Array[Byte], key: Array[Byte]): Array[Byte] = {
+  // Assumes the initialization vector precedes the encrypted data in the stream.
+  // Returns a SHA-256 hash of the prepended initialization vector and encrypted data.
+  def hashAndDecrypt(is: InputStream, os: OutputStream, key: Array[Byte]): Array[Byte] = {
+    val initVector = is.readNBytes(16)
     val iv = new IvParameterSpec(initVector)
     val skeySpec = new SecretKeySpec(key, "AES")
     val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
