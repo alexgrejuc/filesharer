@@ -9,10 +9,8 @@ import library.Utils
 
 import javax.net.ssl.{SSLSocket, SSLSocketFactory}
 
-class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: String, trustStorePassword: String) {
+class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: String, trustStorePassword: String, secretKey: Array[Byte]) {
   var controlSocket: SSLSocket = null
-  val key = "0123456789ABCDEF".getBytes("UTF-8") // TODO: get from user
-  val initVector = "0123456789ABCDEF".getBytes("UTF-8") // TODO: generate and store
 
   def connect(): Unit = {
     System.setProperty("javax.net.ssl.trustStore", trustStorePath)
@@ -22,7 +20,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     controlSocket.setEnabledCipherSuites(Utils.controlCipherSuites)
     Utils.log("Client connected to server")
   }
-  
+
   def notifyDisconnect(os: OutputStream): Unit = {
     val dos = new DataOutputStream(new BufferedOutputStream(os))
     dos.writeInt(3)
@@ -39,7 +37,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
   def connectDataSocket(): Socket = {
     new Socket(InetAddress.getByName(hostName), dataPort)
   }
-  
+
   def notifySend(fileName: String, control: OutputStream): Unit = {
     val cos = new DataOutputStream(control)
 
@@ -64,7 +62,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     val sendFile = new File(file.getAbsolutePath())
     val fis = new BufferedInputStream(new FileInputStream(sendFile))
 
-    val hash = Encryptor.encryptAndHash(fis, dos, key)
+    val hash = Encryptor.encryptAndHash(fis, dos, secretKey)
     dos.close()
     fis.close()
     Utils.log(s"Sent file with hash ${new String(hash)}")
@@ -77,6 +75,19 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     }
     else {
       Utils.logError(s"Hash mismatch.\nClient: ${new String(hash)}\nServer: ${new String(receivedHash)}")
+    }
+  }
+
+  def sendFiles(filePaths: Array[String]): Unit = {
+    for(fp <- filePaths){
+      val f = new File(fp)
+      if (f.exists() && !f.isDirectory() && f.canRead()) {
+        send(f)
+      }
+      else {
+        Utils.logError(s"Could not access file $fp")
+      }
+      Utils.log("")
     }
   }
 }
