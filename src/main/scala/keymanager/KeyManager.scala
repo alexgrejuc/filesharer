@@ -32,6 +32,7 @@ object KeyManager {
       fos = new BufferedOutputStream(new FileOutputStream(file))
       fos.write(key)
       fos.flush()
+      Utils.log(s"Stored key at ${file.getAbsolutePath}")
       true
     } catch {
       case ex: Exception => Utils.logError(s"Could not store key:\n\t${ex.getMessage}")

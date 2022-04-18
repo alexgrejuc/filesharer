@@ -12,16 +12,17 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
 object Main {
-  def logInvalidArgs(): Unit ={
-    Utils.logError("Invalid command line arguments:")
+  def logInvalidArgs(): Unit = {
+    Utils.logError("Invalid command line arguments")
   }
 
   def runClient(args: Array[String], key: Array[Byte]): Unit = {
     val client = new Client("localhost", Utils.controlPort, Utils.dataPort, "/home/grejuca/IdeaProjects/FileSharer/keystore", "passphrase", key)
     client.connect()
 
-    args(1).toLowerCase match {
-      case "send" => client.sendFiles(args.drop(2))
+    args(2).toLowerCase match {
+      case "send" => client.sendFiles(args.drop(3))
+      case "request" => client.requestFiles(args.drop(3))
       case _      => logInvalidArgs()
     }
 
@@ -32,11 +33,11 @@ object Main {
     println()
     val keyFile = new File("/home/grejuca/IdeaProjects/FileSharer/client/key/key")
 
-    if (args.length == 1 && args(0).toLowerCase() == "server") {
+    if (args.length == 2 && args(1).toLowerCase() == "server") {
       val server = new Server(Utils.controlPort, Utils.dataPort, "testfiles/server/", "/home/grejuca/IdeaProjects/FileSharer/keystore", "passphrase")
       server.run()
     }
-    else if (args.length >= 3 && args(0).toLowerCase() == "client") {
+    else if (args.length >= 4 && args(1).toLowerCase() == "client") {
       val keyOption = KeyManager.readKey(keyFile)
 
       keyOption match {
@@ -44,7 +45,7 @@ object Main {
         case _ => Utils.logError("Client cannot run without key. Terminating.")
       }
     }
-    else if (args.length == 1 && args(0).toLowerCase() == "keygenerator") {
+    else if (args.length == 2 && args(1).toLowerCase() == "keygenerator") {
       KeyManager.generateAndStoreKey("AES", 128, keyFile)
     }
     else{

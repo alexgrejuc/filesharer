@@ -23,7 +23,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
 
   def notifyDisconnect(os: OutputStream): Unit = {
     val dos = new DataOutputStream(new BufferedOutputStream(os))
-    dos.writeInt(3)
+    dos.writeInt(Utils.DISCONNECT)
     dos.flush()
   }
 
@@ -42,8 +42,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     val cos = new DataOutputStream(control)
 
     Utils.log("Client notifying server that it would like to send")
-    cos.writeInt(0) // tell the server the client would like to send a file
-    Utils.log("Client sent command")
+    cos.writeInt(Utils.SEND)
 
     cos.writeUTF(fileName)
     cos.flush()
@@ -78,6 +77,59 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     }
   }
 
+  def notifyRequest(fileName: String, control: OutputStream): Unit = {
+    val cos = new DataOutputStream(control)
+
+    cos.writeInt(Utils.REQUEST)
+
+    cos.writeUTF(fileName)
+    cos.flush()
+    Utils.log("Client notified server it is requesting")
+  }
+
+  // Requests a file from the server, saves it to a local file, compares actual and expected
+  // Steps:
+  //    Tell server that the client would like to request
+  //    Tell server the file name
+  //    Receive, hash, and write the file
+  //    Receive the expected hash from the server
+  //    Compare actual and expected hashes
+  def request(fileName: String, toPath: String): Unit = {
+    Utils.log(s"Client requesting ${fileName}")
+
+    var dataSocket: Socket = null
+    var fos: FileOutputStream = null
+
+    try {
+      dataSocket = connectDataSocket()
+      val dis = dataSocket.getInputStream() // encryptor writes to this using its own buffer
+      val cos = controlSocket.getOutputStream() // control commands should be sent immediately, so don't buffer
+      val cis = new BufferedInputStream(controlSocket.getInputStream())
+
+      notifyRequest(fileName, cos)
+
+      val file = new File(toPath)
+      fos = new FileOutputStream(file)
+      val actualHash = Encryptor.hashAndDecrypt(dis, fos, secretKey)
+
+      val expectedHash = cis.readNBytes(32)
+
+      if (actualHash.sameElements(expectedHash)) {
+        Utils.log("Received data hashes to expected value.")
+      }
+      else {
+        Utils.logError("Received data does not hash to expected value. It is potentially unsafe.")
+      }
+    }
+    catch {
+      case ex: Exception => Utils.logError(s"Error requesting file: ${ex.getMessage}")
+    }
+    finally {
+      List(dataSocket, fos).map(r => Utils.tryClose(r))
+    }
+  }
+
+  // Sends files to the server given an array of client-side file paths
   def sendFiles(filePaths: Array[String]): Unit = {
     for(fp <- filePaths){
       val f = new File(fp)
@@ -88,6 +140,19 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
         Utils.logError(s"Could not access file $fp")
       }
       Utils.log("")
+    }
+  }
+
+  // Requests files from server and saves them to the specified location
+  // filesAndPaths must contain a file name followed by a file path to save to
+  def requestFiles(filesAndPaths: Array[String]): Unit = {
+    if (filesAndPaths.length % 2 == 0) {
+      for (i <- 0 until (filesAndPaths.length / 2)) {
+        request(filesAndPaths(i * 2), filesAndPaths((i * 2) + 1))
+      }
+    }
+    else {
+      Utils.logError("Invalid arguments: each requested file needs a corresponding path to be saved to.")
     }
   }
 }
