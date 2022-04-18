@@ -114,6 +114,32 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     }
   }
 
+  // Deletes a file in server storage with name specified by the client.
+  // Tells client size in bytes of the deleted file or -1 if the operation failed
+  def delete(controlIn: DataInputStream, controlOut: DataOutputStream): Unit = {
+    var length: Long = -1
+
+    try {
+      val fileName = controlIn.readUTF()
+      val file = new File(storagePath + fileName)
+
+      if (file.exists() && file.isFile) {
+        length = file.length()
+        file.delete()
+        Utils.log(s"${file.getAbsolutePath} deleted")
+      }
+      else {
+        Utils.log(s"Not able to delete ${file.getAbsolutePath} because it does not exist or is not a file")
+      }
+    } catch {
+      case ex: Exception => Utils.logError(s"Error deleting file: ${ex.getMessage}")
+    }
+    finally {
+      controlOut.writeLong(length)
+    }
+  }
+
+
   def handleClient(controlSocket: Socket, data: ServerSocket) = {
     val cis = new DataInputStream(controlSocket.getInputStream)
     val cos = new DataOutputStream(controlSocket.getOutputStream)
@@ -136,6 +162,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
           clientConnected = false
         case Utils.SEND => receive(data, cis, cos)
         case Utils.REQUEST => send(data, cis, cos)
+        case Utils.DELETE => delete(cis, cos)
         case Utils.DISCONNECT =>
           Utils.log(s"Client disconnected.")
           clientConnected = false

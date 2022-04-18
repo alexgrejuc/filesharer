@@ -13,6 +13,7 @@ object Utils {
 
   val SEND = 0
   val REQUEST = 1
+  val DELETE = 2
   val DISCONNECT = 4
   
   def wait(in: InputStream): Unit = {

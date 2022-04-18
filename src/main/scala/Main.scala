@@ -23,6 +23,7 @@ object Main {
     args(2).toLowerCase match {
       case "send" => client.sendFiles(args.drop(3))
       case "request" => client.requestFiles(args.drop(3))
+      case "delete" => args.drop(3).map(f => client.delete(f))
       case _      => logInvalidArgs()
     }
 

@@ -129,9 +129,34 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     }
   }
 
+  // Asks server to delete file with name fileName
+  def delete(fileName: String): Unit = {
+    Utils.log(s"Client deleting ${fileName}")
+
+    try {
+      val cis = new DataInputStream(controlSocket.getInputStream)
+      val cos = new DataOutputStream(controlSocket.getOutputStream)
+
+      cos.writeInt(Utils.DELETE)
+      cos.writeUTF(fileName)
+
+      val length = cis.readLong()
+
+      if (length >= 0) {
+        Utils.log(s"Client notified that server deleted $fileName of size $length bytes")
+      }
+      else {
+        Utils.log(s"Client notified that server could not delete $fileName. Perhaps the name is incorrect.")
+      }
+    }
+    catch {
+      case ex: Exception => Utils.logError(s"Error deleting file: ${ex.getMessage}")
+    }
+  }
+
   // Sends files to the server given an array of client-side file paths
   def sendFiles(filePaths: Array[String]): Unit = {
-    for(fp <- filePaths){
+    for (fp <- filePaths) {
       val f = new File(fp)
       if (f.exists() && !f.isDirectory() && f.canRead()) {
         send(f)
