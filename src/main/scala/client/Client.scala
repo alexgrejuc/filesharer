@@ -22,9 +22,8 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
   }
 
   def notifyDisconnect(os: OutputStream): Unit = {
-    val dos = new DataOutputStream(new BufferedOutputStream(os))
+    val dos = new DataOutputStream(os)
     dos.writeInt(Utils.DISCONNECT)
-    dos.flush()
   }
 
   def disconnect(): Unit = {
@@ -151,6 +150,51 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     }
     catch {
       case ex: Exception => Utils.logError(s"Error deleting file: ${ex.getMessage}")
+    }
+  }
+
+  def list(): Unit = {
+    def display(filesAndSizes: List[(String, Long)]): Unit = {
+      if (filesAndSizes.length > 0) {
+        val fileNameLabel = "File Name"
+        val sizeLabel = "Size (bytes)"
+        val maxDigitsOfLong = 19
+
+        // determine padding length
+        val longestFileName = filesAndSizes.maxBy(p => p._1.length)._1.length
+        val longest = longestFileName.max(fileNameLabel.length)
+
+        // print header and a horizontal bar followed by the newline-separated file info
+        val header = fileNameLabel.padTo(longest, ' ') + " | " + sizeLabel.padTo(maxDigitsOfLong, ' ')
+        val bar = "-" * header.length
+        Utils.log("\n" + header)
+        Utils.log(bar)
+        filesAndSizes.map(p => Utils.log(p._1.padTo(longestFileName, ' ') + " | " + p._2))
+        Utils.log("")
+      }
+      else {
+        Utils.log("No files stored on the server.")
+      }
+    }
+
+    Utils.log("Client requesting list of saved files.")
+
+    try {
+      val cos = new DataOutputStream(controlSocket.getOutputStream)
+      cos.writeInt(Utils.LIST)
+
+      // ObjectInputStream will block until the ObjectOutputStream on the other end is created
+      // Here is must be created after writing the LIST command to prevent client and server both waiting on each other
+      val cis = new ObjectInputStream(controlSocket.getInputStream)
+
+      val files = cis.readObject().asInstanceOf[Option[List[(String, Long)]]]
+
+      files match {
+        case Some(fs) => display(fs)
+        case _ => Utils.log("The server failed to retrieve file names.")
+      }
+    } catch {
+      case ex: Exception => Utils.logError(s"Error listing files: ${ex.getMessage}")
     }
   }
 

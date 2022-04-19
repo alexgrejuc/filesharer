@@ -24,6 +24,7 @@ object Main {
       case "send" => client.sendFiles(args.drop(3))
       case "request" => client.requestFiles(args.drop(3))
       case "delete" => args.drop(3).map(f => client.delete(f))
+      case "list" => client.list()
       case _      => logInvalidArgs()
     }
 
@@ -38,7 +39,7 @@ object Main {
       val server = new Server(Utils.controlPort, Utils.dataPort, "testfiles/server/", "/home/grejuca/IdeaProjects/FileSharer/keystore", "passphrase")
       server.run()
     }
-    else if (args.length >= 4 && args(1).toLowerCase() == "client") {
+    else if (args.length >= 3 && args(1).toLowerCase() == "client") {
       val keyOption = KeyManager.readKey(keyFile)
 
       keyOption match {

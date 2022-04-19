@@ -139,6 +139,26 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     }
   }
 
+  // Send Some(List[String]) of files in the storage path to client or None if storage cannot be accessed
+  def list(controlSocket: Socket): Unit = {
+    try {
+      val oos = new ObjectOutputStream(controlSocket.getOutputStream)
+
+      val storageDirectory = new File(storagePath)
+
+      val files = if (storageDirectory.exists && storageDirectory.isDirectory) {
+        Some(storageDirectory.listFiles().toList)
+      }
+      else {
+        None
+      }
+
+      val filesAndSizes = files.flatMap(l => Some(l.map(f => (f.getName, f.length))))
+      oos.writeObject(filesAndSizes)
+    } catch {
+      case ex: Exception => Utils.logError(s"Error listing files: ${ex.getMessage}")
+    }
+  }
 
   def handleClient(controlSocket: Socket, data: ServerSocket) = {
     val cis = new DataInputStream(controlSocket.getInputStream)
@@ -148,13 +168,14 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     while (clientConnected) {
       Utils.log("\nServer waiting on client command")
 
-      val mode = try {
-        cis.readInt()
-      } catch {
-        _ => -1
-      }
+      var mode = -1
 
-      Utils.log(s"Server received mode $mode from client")
+      try {
+        mode = cis.readInt()
+        Utils.log(s"Server received mode $mode from client")
+      } catch {
+        _ =>
+      }
 
       mode match {
         case -1 =>
@@ -163,6 +184,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
         case Utils.SEND => receive(data, cis, cos)
         case Utils.REQUEST => send(data, cis, cos)
         case Utils.DELETE => delete(cis, cos)
+        case Utils.LIST => list(controlSocket)
         case Utils.DISCONNECT =>
           Utils.log(s"Client disconnected.")
           clientConnected = false
