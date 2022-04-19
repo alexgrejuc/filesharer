@@ -26,12 +26,12 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
 
   // Receives data from a client, saves it to a file, and responds to the client with a hash of what it received.
   def receive(dataSS: ServerSocket, controlIn: DataInputStream, controlOut: DataOutputStream): Unit = {
-    var dataIn: BufferedInputStream = null
-    var fos: DataOutputStream = null
+    var dataIn: InputStream = null
+    var fos: OutputStream = null
 
     try {
       val dataSocket = dataSS.accept()
-      dataIn = new BufferedInputStream(dataSocket.getInputStream)
+      dataIn = dataSocket.getInputStream
 
       Utils.log("Server waiting to receive file name")
       Utils.wait(controlIn)
@@ -39,7 +39,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
       Utils.log(s"Server receiving file named $fileName")
 
       val receiveFile = new File(storagePath + File.separator + fileName)
-      fos = new DataOutputStream(new FileOutputStream(receiveFile))
+      fos = FileOutputStream(receiveFile)
       Utils.log("Server opened file")
 
       Utils.log("Server waiting to receive data")
@@ -48,15 +48,18 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
 
       val sha256 = MessageDigest.getInstance("SHA-256")
 
-      Iterator.continually(dataIn.read())
-        .takeWhile(_ != -1)
-        .foreach(i => writeAndHash(i.toByte, fos, sha256))
+      // read client data with buffer, write to file, and hash
+      val buffer = new Array[Byte](8192)
+      var count = dataIn.read(buffer)
 
-      fos.close()
+      while (count != -1) {
+        fos.write(buffer, 0, count)
+        sha256.update(buffer, 0, count)
+        count = dataIn.read(buffer)
+      }
+
       val hash = sha256.digest()
-
       controlOut.write(hash)
-      controlOut.flush()
 
       Utils.log("Server notified client of success")
     } catch {
