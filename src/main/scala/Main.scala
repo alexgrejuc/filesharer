@@ -52,14 +52,13 @@ object Main {
       }
     }
 
-    programArgs(0) = programArgs(0).toLowerCase()
     programArgs
   }
   
   def main(args: Array[String]) = {
     val processedArgs = processArgs(args)
 
-    if (processedArgs.length == 1 && processedArgs(0) == "server") {
+    if (processedArgs.length == 1 && processedArgs(0).toLowerCase == "server") {
       val optionServer = Configurator.configureServerWith(serverConfigFile)
 
       optionServer match {
@@ -67,15 +66,15 @@ object Main {
         case _ => Utils.logError("Cannot run server without proper configuration. Terminating execution.")
       }
     }
-    else if (processedArgs.length >= 2 && processedArgs(0) == "client") {
+    else if (processedArgs.length >= 2 && processedArgs(0).toLowerCase == "client") {
       val optionClient = Configurator.configureClientWith(clientConfigFile)
 
       optionClient match {
-        case Some(client) => runClient(processedArgs(1).toLowerCase(), processedArgs.drop(2), client)
+        case Some(client) => runClient(processedArgs(1).toLowerCase, processedArgs.drop(2), client)
         case _ => Utils.logError("Cannot run client without proper configuration. Terminating execution.")
       }
     }
-    else if (processedArgs.length == 1 && processedArgs(0) == "keygenerator") {
+    else if (processedArgs.length == 1 && processedArgs(0).toLowerCase == "keygenerator") {
       KeyManager.generateAndStoreKey("AES", 128, clientConfigFile)
     }
     else{
