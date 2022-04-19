@@ -38,7 +38,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
       val fileName = controlIn.readUTF
       Utils.log(s"Server receiving file named $fileName")
 
-      val receiveFile = new File(storagePath + fileName)
+      val receiveFile = new File(storagePath + File.separator + fileName)
       fos = new DataOutputStream(new FileOutputStream(receiveFile))
       Utils.log("Server opened file")
 
@@ -57,7 +57,6 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
 
       controlOut.write(hash)
       controlOut.flush()
-      Utils.log(s"Server sent hash to client: ${new String(hash)}")
 
       Utils.log("Server notified client of success")
     } catch {
@@ -84,7 +83,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
       dataSocket = dataSS.accept()
       val dos = new DataOutputStream(dataSocket.getOutputStream)
 
-      val file = new File(storagePath + fileName)
+      val file = new File(storagePath + File.separator + fileName)
       fis = new FileInputStream(file)
       val sha256 = MessageDigest.getInstance("SHA-256")
 
@@ -121,7 +120,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
 
     try {
       val fileName = controlIn.readUTF()
-      val file = new File(storagePath + fileName)
+      val file = new File(storagePath + File.separator + fileName)
 
       if (file.exists() && file.isFile) {
         length = file.length()
@@ -203,7 +202,10 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     try {
       control = connectControl()
       data = new ServerSocket(dataPort)
-      Utils.log("Server running")
+
+      Utils.log(s"Server running with control port ${controlPort}, data port ${dataPort}")
+      Utils.log(s"Server storing files at ${storagePath}, and keystore at ${keyStorePath}")
+      Utils.log("")
 
       while (true) {
         controlSocket = control.accept()

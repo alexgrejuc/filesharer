@@ -4,10 +4,6 @@ package library
 import java.io.{Closeable, IOException, InputStream}
 
 object Utils {
-  // TODO: load from config
-  val hostName = "localhost"
-  val controlPort = 9999
-  val dataPort = 9998
   val controlProtocols = Array("TLSv1.3")
   val controlCipherSuites = Array("TLS_AES_128_GCM_SHA256")
 

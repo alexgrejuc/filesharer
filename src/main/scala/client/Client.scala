@@ -18,7 +18,9 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     controlSocket = SSLSocketFactory.getDefault().createSocket(hostName, controlPort).asInstanceOf[SSLSocket]
     controlSocket.setEnabledProtocols(Utils.controlProtocols)
     controlSocket.setEnabledCipherSuites(Utils.controlCipherSuites)
-    Utils.log("Client connected to server")
+    Utils.log(s"Client connected to server at $hostName with control port $controlPort and data port $dataPort")
+    Utils.log(s"Using trust store at $trustStorePath")
+    Utils.log("")
   }
 
   def notifyDisconnect(os: OutputStream): Unit = {
@@ -63,13 +65,13 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     val hash = Encryptor.encryptAndHash(fis, dos, secretKey)
     dos.close()
     fis.close()
-    Utils.log(s"Sent file with hash ${new String(hash)}")
+    Utils.log(s"Sent file.")
 
     val cis = new BufferedInputStream(controlSocket.getInputStream)
     val receivedHash = cis.readNBytes(32)
 
     if (receivedHash.sameElements(hash)) {
-      Utils.log(s"Client notified that server received file with matching hash")
+      Utils.log("Client notified that server received file with matching hash")
     }
     else {
       Utils.logError(s"Hash mismatch.\nClient: ${new String(hash)}\nServer: ${new String(receivedHash)}")

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Removes files that were created during file sharer test execution
-# Assumes existence of testfiles/server and testfiles/client directories
+# Assumes existence of workign directory
 
-rm testfiles/server/*
-rm testfiles/client/decrypted*
+rm working-directory/server/storage/*
+rm working-directory/client/storage/decrypted/*
