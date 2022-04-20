@@ -25,17 +25,19 @@ object Main {
   }
 
   def runClient(command: String, files: Array[String], client: Client): Unit = {
-    client.connect()
+    val connected = client.connect()
 
-    command match {
-      case "send" => client.sendFiles(files)
-      case "request" => client.requestFiles(files)
-      case "delete" => files.map(f => client.delete(f))
-      case "list" => client.list()
-      case _      => logInvalidArgs()
+    if (connected) {
+      command match {
+        case "send" => client.sendFiles(files)
+        case "request" => client.requestFiles(files)
+        case "delete" => files.map(f => client.delete(f))
+        case "list" => client.list()
+        case _ => logInvalidArgs()
+      }
+
+      client.disconnect()
     }
-
-    client.disconnect()
   }
 
   // This function is a hack that handles a bizarre issue that occurs on my machine

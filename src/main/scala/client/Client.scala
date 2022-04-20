@@ -12,15 +12,24 @@ import javax.net.ssl.{SSLSocket, SSLSocketFactory}
 class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: String, trustStorePassword: String, secretKey: Array[Byte]) {
   var controlSocket: SSLSocket = null
 
-  def connect(): Unit = {
-    System.setProperty("javax.net.ssl.trustStore", trustStorePath)
-    System.setProperty("javax.net.ssl.trustStorePassword", trustStorePassword)
-    controlSocket = SSLSocketFactory.getDefault().createSocket(hostName, controlPort).asInstanceOf[SSLSocket]
-    controlSocket.setEnabledProtocols(Utils.controlProtocols)
-    controlSocket.setEnabledCipherSuites(Utils.controlCipherSuites)
-    Utils.log(s"Client connected to server at $hostName with control port $controlPort and data port $dataPort")
-    Utils.log(s"Using trust store at $trustStorePath")
-    Utils.log("")
+  def connect(): Boolean = {
+    val info = s"server at $hostName with control port $controlPort and data port $dataPort"
+
+    try {
+      System.setProperty("javax.net.ssl.trustStore", trustStorePath)
+      System.setProperty("javax.net.ssl.trustStorePassword", trustStorePassword)
+      controlSocket = SSLSocketFactory.getDefault().createSocket(hostName, controlPort).asInstanceOf[SSLSocket]
+      controlSocket.setEnabledProtocols(Utils.controlProtocols)
+      controlSocket.setEnabledCipherSuites(Utils.controlCipherSuites)
+      Utils.log(s"Client connected to $info")
+      Utils.log(s"Using trust store at $trustStorePath")
+      Utils.log("")
+      true
+    } catch {
+      case ex: Exception => Utils.logError(s"Client could not connect to $info: ${ex.getMessage}")
+        Utils.tryClose(controlSocket)
+        false
+    }
   }
 
   def notifyDisconnect(os: OutputStream): Unit = {

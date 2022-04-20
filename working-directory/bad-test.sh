@@ -2,6 +2,9 @@
 
 # An integration test of app functionality with bad input
 
+# Try connecting to the server before it is running
+scala filesharer.jar client list
+
 # Start a server and redirect its output to a log file
 scala filesharer.jar server &>> log-server & pid1="$!"
 
