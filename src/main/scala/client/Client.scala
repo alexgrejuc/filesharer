@@ -109,17 +109,26 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
 
       notifyRequest(fileName, cos)
 
-      val file = new File(toPath)
-      fos = new FileOutputStream(file)
-      val actualHash = Encryptor.hashAndDecrypt(dis, fos, secretKey)
+      // check that the file actually exists (size >= 0)
+      val ddis = new DataInputStream(dis)
+      val size = ddis.readLong()
 
-      val expectedHash = cis.readNBytes(32)
+      if (size >= 0) {
+        val file = new File(toPath)
+        fos = new FileOutputStream(file)
 
-      if (actualHash.sameElements(expectedHash)) {
-        Utils.log("Received data hashes to expected value.")
+        val actualHash = Encryptor.hashAndDecrypt(dis, fos, secretKey)
+        val expectedHash = cis.readNBytes(32)
+
+        if (actualHash.sameElements(expectedHash)) {
+          Utils.log("Received data hashes to expected value.")
+        }
+        else {
+          Utils.logError("Received data does not hash to expected value. It is potentially unsafe.")
+        }
       }
       else {
-        Utils.logError("Received data does not hash to expected value. It is potentially unsafe.")
+        Utils.log(s"Client notified that file $fileName does not exist on the server.")
       }
     }
     catch {

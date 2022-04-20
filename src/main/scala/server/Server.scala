@@ -87,27 +87,37 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
       val dos = new DataOutputStream(dataSocket.getOutputStream)
 
       val file = new File(storagePath + File.separator + fileName)
-      fis = new FileInputStream(file)
-      val sha256 = MessageDigest.getInstance("SHA-256")
 
-      // read file with buffer, hash, and send buffer contents to client
-      val buffer = new Array[Byte](8192)
-      var count = fis.read(buffer)
+      if (file.exists && file.canRead && !file.isDirectory) {
+        // indicate to client that the file exists by sending its size in bytes
+        dos.writeLong(file.length())
 
-      while (count != -1) {
-        dos.write(buffer, 0, count)
-        dos.flush()
-        sha256.update(buffer, 0, count)
-        count = fis.read(buffer)
+        fis = new FileInputStream(file)
+        val sha256 = MessageDigest.getInstance("SHA-256")
+
+        // read file with buffer, hash, and send buffer contents to client
+        val buffer = new Array[Byte](8192)
+        var count = fis.read(buffer)
+
+        while (count != -1) {
+          dos.write(buffer, 0, count)
+          dos.flush()
+          sha256.update(buffer, 0, count)
+          count = fis.read(buffer)
+        }
+
+        Utils.log("Sent file to client.")
+        dos.close()
+
+        val hash = sha256.digest()
+        controlOut.write(hash)
+
+        Utils.log("Sent hash to client")
       }
-
-      Utils.log("Sent file to client.")
-      dos.close()
-
-      val hash = sha256.digest()
-      controlOut.write(hash)
-
-      Utils.log("Sent hash to client")
+      else {
+        dos.writeLong(-1)
+        Utils.log(s"Notified client that file $fileName does not exist.")
+      }
     } catch {
       case ex: Exception => Utils.logError(s"Error sending to client: ${ex.getMessage}")
     }
