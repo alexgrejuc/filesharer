@@ -2,6 +2,7 @@
 
 # An integration test of level app functionality
 # If it is called with argument all, then it includes a large mp4 file
+# Note that this file is not committed to the repo and a substitute must be used if cloning
 # e.g. ./test.sh all
 
 # Remove any old files
@@ -41,8 +42,8 @@ if [ "$1" = all ]; then
     scala filesharer.jar client request big.mp4 client/storage/decrypted/big.mp4
 fi
 
-# Delete those files on the server side
-scala filesharer.jar client delete test.txt test.png
+# Delete test.png, keep test.txt to verify files were actually encrypted
+scala filesharer.jar client delete test.png
 
 if [ "$1" = all ]; then
     scala filesharer.jar client delete big.mp4

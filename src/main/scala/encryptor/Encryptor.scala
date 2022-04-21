@@ -9,6 +9,12 @@ import library.Utils
 
 import java.security.{MessageDigest, SecureRandom}
 
+/*
+ * Functions for encrypting and decrypting files with AES-128 CBC.
+ * The functions also produce a SHA256 hash of the encrypted files.
+ * Note that the PKCS5 is a historical naming convention that refers to PKCS7, which subsumes PKCS5
+ * https://stackoverflow.com/questions/53139243/java-aes-encryption-with-cbc-and-pkcs7padding
+ */
 object Encryptor {
   // Encrypts data from an input stream to an output stream given a cipher in encryption mode.
   // Prepends the initialization vector to the encrypted data.

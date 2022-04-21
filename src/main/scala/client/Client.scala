@@ -9,9 +9,14 @@ import library.Utils
 
 import javax.net.ssl.{SSLSocket, SSLSocketFactory}
 
+/*
+ * Client functionality for (dis)connecting to the server, encrypting and sending files, receiving and decrypting
+ * files, deleting files, and listing files.
+ */
 class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: String, trustStorePassword: String, secretKey: Array[Byte]) {
   var controlSocket: SSLSocket = null
 
+  // Sets trust store path and password in java.net.ssl and connects control socket to the server
   def connect(): Boolean = {
     val info = s"server at $hostName with control port $controlPort and data port $dataPort"
 
@@ -32,26 +37,34 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     }
   }
 
+  // Notifies the server that the client is disconnecting
   def notifyDisconnect(os: OutputStream): Unit = {
     val dos = new DataOutputStream(os)
     dos.writeInt(Utils.DISCONNECT)
   }
 
+  // Notifies server that the client is disconnecting and then closes the control socket
   def disconnect(): Unit = {
-    val os = controlSocket.getOutputStream()
-    notifyDisconnect(os)
-    os.close()
-    Utils.log("Client disconnected")
+    try {
+      val os = controlSocket.getOutputStream()
+      notifyDisconnect(os)
+      Utils.log("Client disconnected")
+    } catch {
+      case ex: Exception => Utils.logError(s"Error disconnecting: ${ex.getMessage}")
+    }
+    finally {
+      Utils.tryClose(controlSocket)
+    }
   }
 
   def connectDataSocket(): Socket = {
     new Socket(InetAddress.getByName(hostName), dataPort)
   }
 
+  // Notifies the server that a file with fileName will be sent
   def notifySend(fileName: String, control: OutputStream): Unit = {
     val cos = new DataOutputStream(control)
 
-    Utils.log("Client notifying server that it would like to send")
     cos.writeInt(Utils.SEND)
 
     cos.writeUTF(fileName)
@@ -59,34 +72,46 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     Utils.log("Client notified server it is sending")
   }
 
+  // Encrypts a file, hashes that encrypted file, and sends the encrypted file to the server
+  // Verifies that the server correctly received the file by comparing the local hash to the one sent by the server
   def send(file: File): Unit = {
-    Utils.log("Client sending")
+    var dataSocket: Socket = null
+    var fis: BufferedInputStream = null
+    Utils.log(s"Client sending ${file.getName}")
 
-    val dataSocket = connectDataSocket()
-    val dos = new BufferedOutputStream(dataSocket.getOutputStream())
-    val cos = new BufferedOutputStream(controlSocket.getOutputStream())
+    try {
+      dataSocket = connectDataSocket()
+      val dos = new BufferedOutputStream(dataSocket.getOutputStream())
+      val cos = new BufferedOutputStream(controlSocket.getOutputStream())
 
-    notifySend(file.getName(), cos)
+      notifySend(file.getName(), cos)
 
-    val sendFile = new File(file.getAbsolutePath())
-    val fis = new BufferedInputStream(new FileInputStream(sendFile))
+      val sendFile = new File(file.getAbsolutePath())
+      fis = new BufferedInputStream(new FileInputStream(sendFile))
 
-    val hash = Encryptor.encryptAndHash(fis, dos, secretKey)
-    dos.close()
-    fis.close()
-    Utils.log(s"Sent file.")
+      val hash = Encryptor.encryptAndHash(fis, dos, secretKey)
+      dos.close()
+      fis.close()
+      Utils.log(s"Sent file.")
 
-    val cis = new BufferedInputStream(controlSocket.getInputStream)
-    val receivedHash = cis.readNBytes(32)
+      val cis = new BufferedInputStream(controlSocket.getInputStream)
+      val receivedHash = cis.readNBytes(32)
 
-    if (receivedHash.sameElements(hash)) {
-      Utils.log("Client notified that server received file with matching hash")
+      if (receivedHash.sameElements(hash)) {
+        Utils.log("Client notified that server received file with matching hash")
+      }
+      else {
+        Utils.logError(s"Hash mismatch.\nClient: ${new String(hash)}\nServer: ${new String(receivedHash)}")
+      }
+    } catch {
+      case ex: Exception => Utils.logError(s"Error sending: ${ex.getMessage}")
     }
-    else {
-      Utils.logError(s"Hash mismatch.\nClient: ${new String(hash)}\nServer: ${new String(receivedHash)}")
+    finally {
+      List(dataSocket, fis).map(r => Utils.tryClose(r))
     }
   }
 
+  // Notifies the server that the client is requesting a file named fileName
   def notifyRequest(fileName: String, control: OutputStream): Unit = {
     val cos = new DataOutputStream(control)
 
@@ -173,7 +198,9 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
     }
   }
 
+  // Asks the server to list all files in its storage
   def list(): Unit = {
+    // displays the list of files and sizes received from the server
     def display(filesAndSizes: List[(String, Long)]): Unit = {
       if (filesAndSizes.length > 0) {
         val fileNameLabel = "File Name"
@@ -189,7 +216,7 @@ class Client(hostName: String, controlPort: Int, dataPort: Int, trustStorePath: 
         val bar = "-" * header.length
         Utils.log("\n" + header)
         Utils.log(bar)
-        filesAndSizes.map(p => Utils.log(p._1.padTo(longestFileName, ' ') + " | " + p._2))
+        filesAndSizes.foreach(p => Utils.log(p._1.padTo(longest, ' ') + " | " + p._2))
         Utils.log("")
       }
       else {

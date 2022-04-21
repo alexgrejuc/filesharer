@@ -42,7 +42,7 @@ object Main {
 
   // This function is a hack that handles a bizarre issue that occurs on my machine
   // When I compile and then run scala prog.jar, all arguments following prog.jar are duplicated
-  // e.g. scala fileserver.jar client send file.txt results in args = [client, send, file.txt, client, send, file.txt]
+  // e.g. scala filesharer.jar client send file.txt results in args = [filesharer.jar, client, send, file.txt, client, send, file.txt]
   // This issue does not occur if I interpret the same file or use sbt run
   def processArgs(args: Array[String]): Array[String] = {
     // drop the name of the binary

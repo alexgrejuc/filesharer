@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# An integration test of app functionality with bad input
+# An integration test of app functionality with bad or atypical input
 
 # Try connecting to the server before it is running
 scala filesharer.jar client list
@@ -32,6 +32,11 @@ scala filesharer.jar
 scala filesharer.jar client
 scala filesharer.jar client request test.txt
 scala filesharer.jar server send test.txt
+
+# client commands without any files of file names
+scala filesharer.jar client delete
+scala filesharer.jar client send
+scala filesharer.jar client request
 
 # Stop the server
 kill $pid1

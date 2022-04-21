@@ -10,6 +10,8 @@ import library.Utils
 import java.security.MessageDigest
 
 class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath: String, keyStorePassword: String) {
+
+  // Configure the keystore path and password and create a TLS 1.3 control socket
   def connectControl(): SSLServerSocket = {
     System.setProperty("javax.net.ssl.keyStore", keyStorePath)
     System.setProperty("javax.net.ssl.keyStorePassword", keyStorePassword)
@@ -25,6 +27,10 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
   }
 
   // Receives data from a client, saves it to a file, and responds to the client with a hash of what it received.
+  // Steps:
+  //        Receives file name from client
+  //        Loop to receive data from client, hash it, and write it to a file with a buffer
+  //        Send the hash to the client over the secure control socket
   def receive(dataSS: ServerSocket, controlIn: DataInputStream, controlOut: DataOutputStream): Unit = {
     var dataIn: InputStream = null
     var fos: OutputStream = null
@@ -33,8 +39,6 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
       val dataSocket = dataSS.accept()
       dataIn = dataSocket.getInputStream
 
-      Utils.log("Server waiting to receive file name")
-      Utils.wait(controlIn)
       val fileName = controlIn.readUTF
       Utils.log(s"Server receiving file named $fileName")
 
@@ -42,15 +46,13 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
       fos = FileOutputStream(receiveFile)
       Utils.log("Server opened file")
 
-      Utils.log("Server waiting to receive data")
-      Utils.wait(dataIn)
-      Utils.log("Server received data")
-
       val sha256 = MessageDigest.getInstance("SHA-256")
 
       // read client data with buffer, write to file, and hash
       val buffer = new Array[Byte](8192)
       var count = dataIn.read(buffer)
+
+      Utils.log("Server received data")
 
       while (count != -1) {
         fos.write(buffer, 0, count)
@@ -73,7 +75,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
   // Sends requested data to client as well as its hash.
   // Steps:
   //        Receive file name from client
-  //        Read file from disk, hash it, and send it to the client
+  //        Loop to read file from disk, hash it, and send to the client with a buffer
   //        Send client the intended hash
   def send(dataSS: ServerSocket, controlIn: DataInputStream, controlOut: DataOutputStream): Unit = {
     var dataSocket: Socket = null
@@ -159,7 +161,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
       val storageDirectory = new File(storagePath)
 
       val files = if (storageDirectory.exists && storageDirectory.isDirectory) {
-        Some(storageDirectory.listFiles().toList)
+        Some(storageDirectory.listFiles(x => x.isFile).toList)
       }
       else {
         None
@@ -172,6 +174,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     }
   }
 
+  // Handles client requests until they disconnect
   def handleClient(controlSocket: Socket, data: ServerSocket) = {
     val cis = new DataInputStream(controlSocket.getInputStream)
     val cos = new DataOutputStream(controlSocket.getOutputStream)
@@ -207,6 +210,7 @@ class Server(controlPort: Int, dataPort: Int, storagePath: String, keyStorePath:
     }
   }
 
+  // Runs indefinitely, accepting and handling one client at a time
   def run(): Unit = {
     var control: SSLServerSocket = null
     var data: ServerSocket = null
