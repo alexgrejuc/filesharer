@@ -2,6 +2,8 @@
 
 An application with a command line interface that enables clients to locally encrypt files, store them on a server, and later retrieve and decrypt them.
 
+![An example run of the app](documentation/img/execution-example.png)
+
 # Command Line Instructions
 
 A `.jar` is included in this repository, so all that is needed to use the app is `scala`, although `sbt` can be used to build it if desired. 
