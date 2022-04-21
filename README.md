@@ -40,6 +40,8 @@ The syntax for sending files is: `scala filesharer.jar client send <file name>*`
 
     scala filesharer.jar client send client/storage/original/test.txt client/storage/original/test.png
     
+With the the configuration in [working-directory/server/config/config](working-directory/server/config/config), the encrypted version of these files will end up in [working-directory/server/storage](working-directory/server/storage).
+    
 #### list
 
 To list files stored on the server:
@@ -84,7 +86,7 @@ First, delete or rename the old key:
 
 Then create a new one with:
 
-    mv client/config/key client/config/oldkey
+    scala filesharer.jar keygenerator
     
 # Additional Details
 
