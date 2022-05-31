@@ -1,9 +1,12 @@
 #!/bin/bash
 
-# An integration test of level app functionality
+# An integration test of app functionality
+# Does not return a pass/fail result
+# Test output must be manually inspected for expected output
+#
 # If it is called with argument all, then it includes a large mp4 file
-# Note that this file is not committed to the repo and a substitute must be used if cloning
 # e.g. ./test.sh all
+# Note that this file is not committed to the repo and a substitute must be used if cloning
 
 # Remove any old files
 ./clean.sh

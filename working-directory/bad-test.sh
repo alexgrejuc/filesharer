@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # An integration test of app functionality with bad or atypical input
+# Does not return a pass/fail result
+# Test output must be manually inspected for expected output
 
 # Try connecting to the server before it is running
 scala filesharer.jar client list
