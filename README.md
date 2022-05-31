@@ -6,7 +6,7 @@ An application with a command line interface that enables clients to locally enc
 
 # Command Line Instructions
 
-A `.jar` is included in this repository, so all that is needed to use the app is `scala`, although `sbt` can be used to build it if desired. 
+A `.jar` is included in this repository, so all that is needed to use the app is `scala`, although `sbt` can be used to build it if desired.
 
 Assumptions: you have cloned the repository and you are in the top-level `filesharer` directory.
 
@@ -27,9 +27,9 @@ This should produce an output similar to:
 
     Server running with control port 9999, data port 9998
     Server storing files at server/storage, and keystore at server/config/keystore
-    
+
 Enter `CTRL+C` to stop the server.
-    
+
 ### Using the client
 
 The client accepts four commands: `send`, `list`, `request`, and `delete`. They all require the server to be running and are described below:
@@ -39,9 +39,9 @@ The client accepts four commands: `send`, `list`, `request`, and `delete`. They 
 The syntax for sending files is: `scala filesharer.jar client send <file name>*`. For example:
 
     scala filesharer.jar client send client/storage/original/test.txt client/storage/original/test.png
-    
+
 With the the configuration in [working-directory/server/config/config](working-directory/server/config/config), the encrypted version of these files will end up in [working-directory/server/storage](working-directory/server/storage).
-    
+
 #### list
 
 To list files stored on the server:
@@ -55,7 +55,7 @@ Assuming the previous command sent test.txt and test.png, the output should be:
 
     Client requesting list of saved files.
 
-    File Name | Size (bytes)       
+    File Name | Size (bytes)
     -------------------------------
     test.png  | 277792
     test.txt  | 48
@@ -78,16 +78,16 @@ The syntax for deleting files on the server side is: `scala filesharer.jar clien
 
 ## Generating a new key for the client (optional)
 
-The working-directory already contains an AES-128 key at [working-directory/client/config/key](working-directory/client/config/key). However, if desired, a new one may be created. 
+The working-directory already contains an AES-128 key at [working-directory/client/config/key](working-directory/client/config/key). However, if desired, a new one may be created.
 
-First, delete or rename the old key: 
+First, delete or rename the old key:
 
     mv client/config/key client/config/oldkey
 
 Then create a new one with:
 
     scala filesharer.jar keygenerator
-    
+
 # Additional Details
 
 The application was developed and tested on Ubuntu 20.04 with JDK 11.0.014 and Scala 3.1.1. It does not depend on any external libraries.
@@ -105,7 +105,7 @@ This repository also includes some bash scripts that may be useful for evaluatio
 3. [main/working-directory/bad-test.sh](main/working-directory/bad-test.sh) - runs some tests of the app in atypical/incorrect workflows.
 4. [working-directory/clean.sh](working-directory/clean.sh) - removes server files, client's decrypted files, and server logs produced by the above tests.
 
-# Design Overview 
+# Design Overview
 
 The image below shows the architecture of the application. It consists of a client and server that exchange commands and metadata over a control socket and encrypted files over a data socket. Both the client and server store and retrieve data from their file systems. The client uses AES-128 in CBC mode with a locally stored key to encrypt and decrypt its files as well as a SHA-256 hash to verify correct data transmission and integrity. The application also includes a key manager which allows users to generate and store a key.
 
@@ -116,11 +116,11 @@ The image below shows the architecture of the application. It consists of a clie
 
 The image below shows a high level overview of the application-level protocol. Each operation begins with a TLS 1.3 handshake over the control socket. Once a client has authenticated the server, it sends encrypted commands and metadata over the control socket and locally-encrypted files over the data socket.
 
-![High Level Protocol Overview](documentation/img/protocol-high-level.png)
+![High Level Protocol Overview](documentation/img/high-level-protocol.png)
 
 The image below shows the protocol in more detail, for the send command. Over the control socket, the client notifies the server it has data to send and it tells it the name of the file it is sending. Then, it connects the data socket, sends the file over it, and closes that socket. To ensure that the server has received all data and to ensure that it has not been tampered with by a man in the middle, the server sends a hash of the encrypted file over the control socket. The client then checks that this hash matches what it sent and notifices the user of the result before disconnecting.
 
-![Client-Server Interaction for Sending a File](documentation/img/send.png)
+![Client-Server Interaction for Sending a File](documentation/img/send-protocol.png)
 
 # Design Choices
 
