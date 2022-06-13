@@ -2,6 +2,8 @@
 
 A command line interface application that enables clients to locally encrypt files, store them on a server, and later retrieve and decrypt them. It uses a custom application-level protocol on top of TCP/IP and depends only on the Java and Scala standard libraries.
 
+Note: I used Scala for the first time while working on this project and the code is likely far from idiomatic.
+
 ![An example run of the app](documentation/img/execution-example.png)
 
 # Command Line Instructions
