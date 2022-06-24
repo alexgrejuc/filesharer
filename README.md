@@ -2,6 +2,8 @@
 
 A command line interface application that enables clients to locally encrypt files, store them on a server, and later retrieve and decrypt them. It uses a custom application-level protocol on top of TCP/IP and depends only on the Java and Scala standard libraries.
 
+The design borrows some ideas from FTP, with both the client and server using separate data and control ports. As in [FTP streaming mode](https://www.w3.org/Protocols/rfc959/3_DataTransfer.html), the data port is closed after a file is sent over it. Both the client and server make use of streams for their data transfer operations, so there are no file size limitations.
+
 Note: I used Scala for the first time while working on this project and the code is likely far from idiomatic.
 
 ![An example run of the app](documentation/img/execution-example.png)
