@@ -14,7 +14,7 @@ Note: these steps were only tested on a single machine running Ubuntu 20.04. The
 
 A `.jar` is included in this repository, so the app can be used directly with `scala`, although `sbt` can be used to build it if desired.
 
-Assumptions: you have cloned the repository and you are in the top-level `filesharer` directory.
+Assumptions: you have cloned the repository, and you are in the top-level `filesharer` directory.
 
 ### Building the application (optional)
 
@@ -46,7 +46,7 @@ The syntax for sending files is: `scala filesharer.jar client send <file name>*`
 
     scala filesharer.jar client send client/storage/original/test.txt client/storage/original/test.png
 
-With the the configuration in [working-directory/server/config/config](working-directory/server/config/config), the encrypted version of these files will end up in [working-directory/server/storage](working-directory/server/storage).
+With the configuration in [working-directory/server/config/config](working-directory/server/config/config), the encrypted version of these files will end up in [working-directory/server/storage](working-directory/server/storage).
 
 #### list
 
@@ -124,7 +124,7 @@ The image below shows a high level overview of the application-level protocol. E
 
 ![High Level Protocol Overview](documentation/img/high-level-protocol.png)
 
-The image below shows the protocol in more detail, for the send command. Over the control socket, the client notifies the server it has data to send and it tells it the name of the file it is sending. Then, it connects the data socket, sends the file over it, and closes that socket. To ensure that the server has received all data and to ensure that it has not been tampered with by a machine in the middle, the server sends a hash of the encrypted file over the control socket. The client then checks that this hash matches what it sent and notifices the user of the result before disconnecting.
+The image below shows the protocol in more detail, for the send command. Over the control socket, the client notifies the server it has data to send, and it tells it the name of the file it is sending. Then, it connects the data socket, sends the file over it, and closes that socket. To ensure that the server has received all data and to ensure that it has not been tampered with by a machine in the middle, the server sends a hash of the encrypted file over the control socket. The client then checks that this hash matches what it sent and notifies the user of the result before disconnecting.
 
 ![Client-Server Interaction for Sending a File](documentation/img/send-protocol.png)
 
@@ -134,15 +134,15 @@ The image below shows the protocol in more detail, for the send command. Over th
 
 I chose AES 128 in CBC mode. Additionally, I chose to hash the encrypted data with SHA256 for data integrity.
 
-I chose AES since it is an industry standard in symmetric key encryption, which I chose because only the client needs to encrypt and decrypt the data. I chose a 128 bit key because it is secure [(at least through 2030 according to NIST)](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf) and faster than a larger key size. Although CBC is susceptible to padding oracle attacks, this is not a problem in this instance since the client is the only one decrypting data and it does not share the result of this process with anyone. Since CBC does not ensure message integrity, the protocol requires a hash of the encrypted data to be sent over the secure control socket, which allows the receiver to compare hashes and ensure that all data has been transmitted and has not been tampered with.
+I chose AES since it is an industry standard in symmetric key encryption, which I chose because only the client needs to encrypt and decrypt the data. I chose a 128 bit key because it is secure [(at least through 2030 according to NIST)](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf) and faster than a larger key size. Although CBC is susceptible to padding oracle attacks, this is not a problem in this instance since the client is the only one decrypting data, and it does not share the result of this process with anyone. Since CBC does not ensure message integrity, the protocol requires a hash of the encrypted data to be sent over the secure control socket, which allows the receiver to compare hashes and ensure that all data has been transmitted and has not been tampered with.
 
-GCM mode is a also viable choice and has the benefit of providing security as well as integrity. However, given that the files are sent over the unauthenticated data socket, a MAC would sent over the control socket would still be needed to avoid a machine in the middle attack. Additionally, GCM has a 64 GB file size limitation, which would require additional implementation overhead for splitting large files into 64 GB chunks.
+GCM mode is also a viable choice and has the benefit of providing security as well as integrity. However, given that the files are sent over the unauthenticated data socket, a MAC sent over the control socket would still be needed to avoid a machine in the middle attack. Additionally, GCM has a 64 GB file size limitation, which would require additional implementation overhead for splitting large files into 64 GB chunks.
 
 For the control connection over TLS 1.3, I chose GCM mode to ensure the integrity of commands and metadata. GCM is a more appropriate choice here given that hte control connection is authenticated and considering that commands and metadata take up less than 1 KB.
 
 ## Two Sockets
 
-I split communication over two sockets to get the authentication and encryption benefits of TLS without re-encrypting all of the client's data.
+I split communication over two sockets to get the authentication and encryption benefits of TLS without re-encrypting all the client's data.
 
 # Improvements
 
