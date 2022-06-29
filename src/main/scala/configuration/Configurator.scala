@@ -19,8 +19,8 @@ object Configurator {
   // control port
   // data port
   // storage path
-  // key store path
-  // key store password
+  // key store path (for TLS control socket)
+  // key store password (for TLS control socket)
   // <POSIX terminating newline>
   def configureServerWith(configurationFile: File): Option[Server] = {
     var file: BufferedSource = null
@@ -54,12 +54,12 @@ object Configurator {
   }
 
   // Configures a client using a file that has the following info separated by newlines
-  // key path
+  // key path (for locally encrypting client's files)
   // host name
   // control port
   // data port
-  // trust store path
-  // trust store password
+  // trust store path (for TLS control socket)
+  // trust store password (for TLS control socket)
   // <POSIX terminating newline>
   def configureClientWith(configurationFile: File): Option[Client] = {
     var file: BufferedSource = null
