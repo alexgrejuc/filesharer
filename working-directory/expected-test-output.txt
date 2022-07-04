@@ -1,0 +1,68 @@
+Stored key at /home/grejuca/IdeaProjects/FileSharer/working-directory/client/config/key
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client requesting list of saved files.
+No files stored on the server.
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client sending test.txt
+Client notified server it is sending
+Sent file.
+Client notified that server received file with matching hash
+
+Client sending test.png
+Client notified server it is sending
+Sent file.
+Client notified that server received file with matching hash
+
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client requesting list of saved files.
+
+File Name | Size (bytes)       
+-------------------------------
+test.png  | 277792
+test.txt  | 48
+
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client requesting test.txt
+Client notified server it is requesting
+Received data hashes to expected value.
+Client requesting test.png
+Client notified server it is requesting
+Received data hashes to expected value.
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client deleting test.png
+Client notified that server deleted test.png of size 277792 bytes
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client requesting list of saved files.
+
+File Name | Size (bytes)       
+-------------------------------
+test.txt  | 48
+
+Client disconnected
+
+checked that files match
+
+testing done

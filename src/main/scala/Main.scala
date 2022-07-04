@@ -40,27 +40,8 @@ object Main {
     }
   }
 
-  // This function is a hack that handles a bizarre issue that occurs on my machine
-  // When I compile and then run scala prog.jar, all arguments following prog.jar are duplicated
-  // e.g. scala filesharer.jar client send file.txt results in args = [filesharer.jar, client, send, file.txt, client, send, file.txt]
-  // This issue does not occur if I interpret the same file or use sbt run
-  def processArgs(args: Array[String]): Array[String] = {
-    // drop the name of the binary
-    var programArgs = args.drop(1)
-
-    if (programArgs.length % 2 == 0) {
-      if (programArgs.slice(0, programArgs.length / 2).sameElements(programArgs.slice(programArgs.length / 2, programArgs.length))) {
-        programArgs = programArgs.slice(0, programArgs.length / 2)
-      }
-    }
-
-    programArgs
-  }
-  
   def main(args: Array[String]) = {
-    val processedArgs = processArgs(args)
-
-    if (processedArgs.length == 1 && processedArgs(0).toLowerCase == "server") {
+    if (args.length == 1 && args(0).toLowerCase == "server") {
       val optionServer = Configurator.configureServerWith(serverConfigFile)
 
       optionServer match {
@@ -68,15 +49,15 @@ object Main {
         case _ => Utils.logError("Cannot run server without proper configuration. Terminating execution.")
       }
     }
-    else if (processedArgs.length >= 2 && processedArgs(0).toLowerCase == "client") {
+    else if (args.length >= 2 && args(0).toLowerCase == "client") {
       val optionClient = Configurator.configureClientWith(clientConfigFile)
 
       optionClient match {
-        case Some(client) => runClient(processedArgs(1).toLowerCase, processedArgs.drop(2), client)
+        case Some(client) => runClient(args(1).toLowerCase, args.drop(2), client)
         case _ => Utils.logError("Cannot run client without proper configuration. Terminating execution.")
       }
     }
-    else if (processedArgs.length == 1 && processedArgs(0).toLowerCase == "keygenerator") {
+    else if (args.length == 1 && args(0).toLowerCase == "keygenerator") {
       KeyManager.generateAndStoreKey("AES", 128, clientConfigFile)
     }
     else{

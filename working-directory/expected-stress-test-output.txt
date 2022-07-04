@@ -1,0 +1,61 @@
+Client could not connect to server at localhost with control port 9999 and data port 9998: Connection refused (Connection refused)
+
+Key at /home/grejuca/IdeaProjects/FileSharer/working-directory/client/config/key already exists. Delete it or provide another path.
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client requesting fakefile1
+Client notified server it is requesting
+Client notified that file fakefile1 does not exist on the server.
+Client requesting fakefile2
+Client notified server it is requesting
+Client notified that file fakefile2 does not exist on the server.
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Could not access file fakefile1
+
+Could not access file fakefile2
+
+Could not access file fakefile3
+
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client requesting list of saved files.
+No files stored on the server.
+Client disconnected
+
+Invalid command line arguments
+
+Invalid command line arguments
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Invalid arguments: each requested file needs a corresponding path to be saved to.
+Client disconnected
+
+Invalid command line arguments
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client disconnected
+
+Client connected to server at localhost with control port 9999 and data port 9998
+Using trust store at client/config/truststore
+
+Client disconnected
+
+testing done

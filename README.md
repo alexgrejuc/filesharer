@@ -18,8 +18,8 @@ The rest of this README contains the following sections:
      * [The Delete Command](#the-delete-command)
    * [Encryption Overview](#encryption-overview)
  * [Tech Stack](#tech-stack)
+ * [Requirements for Running the Application](#requirements-for-running-the-application)
  * [Command Line Usage Instructions](#command-line-usage-instructions)
-   * [Building the Application (Optional)](#building-the-application-optional)
    * [Running the Server](#running-the-server)
    * [Using the Client](#using-the-client)
      * [Sending Files](#sending-files)
@@ -27,7 +27,8 @@ The rest of this README contains the following sections:
      * [Requesting Files](#requesting-files)
      * [Deleting Files](#deleting-files)
    * [Generating a New Key for the Client (Optional)](#generating-a-new-key-for-the-client-optional)
- * [Optional Configuration Details](#optional-configuration-details)
+   * [Building the Application (Optional)](#building-the-application-optional)
+ * [Configuring the Application](#configuring-the-application)
  * [Listing of Scripts](#listing-of-scripts)
 
 # Project Design
@@ -40,7 +41,7 @@ The image below shows the architecture of the application. It consists of a clie
 
 ## Protocol Overview
 
-### High Level Overview 
+### High Level Overview
 The custom application-level protocol is built on top of TCP/IP and borrows some ideas from FTP.
 
 [As with FTP](https://www.w3.org/Protocols/rfc959/2_Overview.html), communication is split over separate control and data sockets. The control socket uses TLS 1.3 and allows the client and server to authenticate each other and thereafter communicate with encrypted, authenticated commands and metadata. However, it would be computationally wasteful to re-encrypt the client's files, so these are sent over a plain TCP socket and authenticated over the control socket.
@@ -85,26 +86,25 @@ Since CBC does not ensure message integrity, the protocol requires a SHA-256 has
 
 The application is written entirely in Scala. It does not depend on any frameworks or libraries aside from the Scala and Java standard libraries. It uses cryptographic primitives from [javax.crypto](https://docs.oracle.com/javase/8/docs/api/javax/crypto/package-summary.html) and [java.security](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/security/Security.html) as well as a TLS 1.3 implementation from [javax.net.ssl](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/javax/net/ssl/package-summary.html).
 
+# Requirements for Running the Application
+
+A pre-built `.jar` is [included](working-directory/filesharer.jar) in this repository, so the project does not need to be built to use the application. The only requirement to run it is JDK 17 or higher. It can be installed with a package manager or by following the instructions [here](https://www.oracle.com/java/technologies/downloads/#java17).
+
 # Command Line Usage Instructions
 
-Note: these steps were only tested on a single machine running Ubuntu 20.04. They should work on other machines with JDK 11.0.014 and Scala 3.1.1, however.
-
-A `.jar` is included in this repository, so the app can be used directly with `scala`, although `sbt` can be used to build it if desired.
+The following instructions are written with a Unix system in mind, but a reader familiar with the Windows command line should be able to follow along, particularly if using PowerShell, which aliases Unix programs such as `cd`.
 
 Assumptions: you have cloned the repository, and you are in the top-level `filesharer` directory.
 
-## Building the Application (Optional)
-
-    sbt clean compile package
-    cp target/scala-3.1.1/filesharer_3-0.jar working-directory/filesharer.jar
-
-Afterwards, to use the application, you must be in the working-directory (it contains configuration files and directories needed to run the app):
+The application must be run from within `working-directory`, which contains configuration files and directories needed to run the app. The first step is to navigate there:
 
     cd working-directory
 
+The following instructions for running the application must be run from `working-directory`.
+
 ## Running the Server
 
-    scala filesharer.jar server
+    java -jar filesharer.jar server
 
 This should produce an output similar to:
 
@@ -113,15 +113,22 @@ This should produce an output similar to:
 
 Enter `CTRL+C` to stop the server.
 
+It is possible that ports 9999 or 9998 may unavailable, in which case the server will produce the following message:
+
+    Error connecting: Address already in use (Bind failed)
+    Server stopping execution
+
+One solution is to change the application port configuration. See [Configuring the Application](#configuring-the-application) for more information.
+
 ## Using the Client
 
-The client accepts four commands: `send`, `list`, `request`, and `delete`. They all require the server to be running and are described below:
+The server must be online for the client to work. The client accepts four commands: `send`, `list`, `request`, and `delete`. They are described below:
 
 ### Sending Files
 
-The syntax for sending files is: `scala filesharer.jar client send <file name>*`. For example:
+The syntax for sending files is: `java -jar filesharer.jar client send <file name>*`. For example:
 
-    scala filesharer.jar client send client/storage/original/test.txt client/storage/original/test.png
+    java -jar filesharer.jar client send client/storage/original/test.txt client/storage/original/test.png
 
 With the configuration in [working-directory/server/config/config](working-directory/server/config/config), the encrypted version of these files will end up in [working-directory/server/storage](working-directory/server/storage).
 
@@ -129,7 +136,7 @@ With the configuration in [working-directory/server/config/config](working-direc
 
 To list files stored on the server:
 
-    scala filesharer.jar client list
+    java -jar filesharer.jar client list
 
 Assuming the previous command sent test.txt and test.png, the output should be:
 
@@ -147,17 +154,17 @@ Assuming the previous command sent test.txt and test.png, the output should be:
 
 ### Requesting Files
 
-The syntax for requesting files back from the server is: `scala filesharer.jar client request (<file name> <path to save file to>)+`. For example:
+The syntax for requesting files back from the server is: `java -jar filesharer.jar client request (<file name> <path to save file to>)+`. For example:
 
-    scala filesharer.jar client request test.txt client/storage/decrypted/test.txt test.png client/storage/decrypted/test.png
+    java -jar filesharer.jar client request test.txt client/storage/decrypted/test.txt test.png client/storage/decrypted/test.png
 
 This will request the files that were sent with the previous `send` command, decrypt them, and store them at the specified path.
 
 ### Deleting Files
 
-The syntax for deleting files on the server side is: `scala filesharer.jar client delete <file name>*`. For example:
+The syntax for deleting files on the server side is: `java -jar filesharer.jar client delete <file name>*`. For example:
 
-    scala filesharer.jar client delete test.txt test.png
+    java -jar filesharer.jar client delete test.txt test.png
 
 ## Generating a New Key for the Client (Optional)
 
@@ -169,11 +176,28 @@ First, delete or rename the old key:
 
 Then create a new one with:
 
-    scala filesharer.jar keygenerator
+    java -jar filesharer.jar keygenerator
 
-# Optional Configuration Details
+## Building the Application (Optional)
 
-The above instructions require running the application from `working-directory`, although this can be changed by modifying the configuration files. The only restriction is that the server must be run from a directory that contains [server/config/config](working-directory/server/config/config) and the client must be run from a directory that contains [client/config/config](working-directory/client/config/config). Look in [src/main/scala/configuration/Configurator.scala](src/main/scala/configuration/Configurator.scala) for the format of these files.
+Since a `.jar` is included with this repository, building is not necessary to run the application. These instructions are provided as an optional step.
+
+To build the application, scala (3.1.1) and the scala build tool, sbt (1.6.2), are required. Both of these can be installed by following the official `cs setup` [instructions](https://www.scala-lang.org/download/).
+
+Afterwards, from the top level filesharer directory, build the project and place the `.jar` in `working-directory`.
+
+    sudo sbt clean assembly
+    cp target/scala-3.1.1/FileSharer-assembly-0.jar working-directory/filesharer.jar
+
+The new `.jar` can now be used from within `working-directory` as described above.
+
+# Configuring the Application
+
+The above instructions require running the application from `working-directory`, although this can be changed by modifying the configuration files. The only restriction is that the server must be run from a directory that contains [server/config/config](working-directory/server/config/config) and the client must be run from a directory that contains [client/config/config](working-directory/client/config/config). 
+
+Look in [src/main/scala/configuration/Configurator.scala](src/main/scala/configuration/Configurator.scala) for the format of these files.
+
+If the application ports need to be changed, the client and server must be given a matching data port and control port.
 
 With the provided configuration, the server will store its files in [working-directory/server/storage](working-directory/server/storage).
 
@@ -184,6 +208,6 @@ Although the above examples send client files from [working-directory/client/sto
 The following bash scripts may be useful for evaluation the application, although they are not necessary for doing so:
 
 1. [setup.sh](setup.sh) - creates the working-directory structure (without the gitkeep directory).
-2. [working-directory/test.sh](working-directory/test.sh) - runs the app in typical workflows. 
-3. [working-directory/bad-test.sh](working-directory/bad-test.sh) - runs some tests of the app in atypical/incorrect workflows.
+2. [working-directory/test.sh](working-directory/test.sh) - runs the app in typical workflows.
+3. [working-directory/stress-test.sh](working-directory/stress-test.sh) - runs some tests of the app in atypical/incorrect workflows.
 4. [working-directory/clean.sh](working-directory/clean.sh) - removes server files, client's decrypted files, and server logs produced by the above tests.
