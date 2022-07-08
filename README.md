@@ -18,7 +18,9 @@ The rest of this README contains the following sections:
      * [The Delete Command](#the-delete-command)
    * [Encryption Overview](#encryption-overview)
  * [Tech Stack](#tech-stack)
- * [Requirements for Running the Application](#requirements-for-running-the-application)
+ * [Web Browser Usage Instructions](#web-browser-usage-instructions)
+ * [Docker Usage Instruction](#docker-usage-instructions)
+ * [Requirements for Running the Application Locally](#requirements-for-running-the-application-locally)
  * [Command Line Usage Instructions](#command-line-usage-instructions)
    * [Running the Server](#running-the-server)
    * [Using the Client](#using-the-client)
@@ -86,9 +88,50 @@ Since CBC does not ensure message integrity, the protocol requires a SHA-256 has
 
 The application is written entirely in Scala. It does not depend on any frameworks or libraries aside from the Scala and Java standard libraries. It uses cryptographic primitives from [javax.crypto](https://docs.oracle.com/javase/8/docs/api/javax/crypto/package-summary.html) and [java.security](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/security/Security.html) as well as a TLS 1.3 implementation from [javax.net.ssl](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/javax/net/ssl/package-summary.html).
 
-# Requirements for Running the Application
+# Web Browser Usage Instructions
 
-A pre-built `.jar` is [included](working-directory/filesharer.jar) in this repository, so the project does not need to be built to use the application. The only requirement to run it is JDK 17 or higher. It can be installed with a package manager or by following the instructions [here](https://www.oracle.com/java/technologies/downloads/#java17).
+The only requirement to use the application via a web browser is a GitHub or Docker account.
+
+ 1. Navigate to [Play With Docker](https://labs.play-with-docker.com/) in your web browser.
+ 2. Click `Login` and proceed with your GitHub or Docker account.
+ 3. Click `Start`.
+ 3. Click on `ADD NEW INSTANCE`.
+
+ You should see a terminal window in your browser similar to the one below:
+
+ ![Play With Docker terminal](documentation/img/play-with-docker.png)
+ 
+You can then follow the [Docker Usage Instructions](#docker-usage-instructions) to use the application.
+
+# Docker Usage Instructions
+
+These instructions assume you are in an environment where Docker is available (e.g. your local machine or Play with Docker).
+
+Pull and run the filesharer docker image in detached mode:
+
+    docker run -d --name filesharer alexgrejuc/filesharer 
+
+This will start a container in which the server is running. Next, run a shell within the container:
+
+    docker exec -it filesharer /bin/sh
+
+If successful, you will have shell access in `working-directory` in the container. Your terminal window should resemble the Play With Docker terminal window below:
+
+![Play With Docker container](documentation/img/docker-exec.png)
+
+If it does, the server is running in the background. You can jump to [Using the Client](#using-the-client) to start using the application.
+
+After you are done using the application, escape the container with `Ctrl-D`. Clean up by first stopping the container:
+
+    docker stop filesharer
+
+Then remove it:
+
+    docker rm filesharer
+
+# Requirements for Running the Application Locally
+
+A pre-built `.jar` is [included](working-directory/filesharer.jar) in this repository, so the project does not need to be built to use the application. The only requirement to run it locally is JDK 17 or higher. It can be installed with a package manager or by following the instructions [here](https://www.oracle.com/java/technologies/downloads/#java17).
 
 # Command Line Usage Instructions
 
@@ -103,6 +146,8 @@ The application must be run from within `working-directory`, which contains conf
 The following instructions for running the application must be run from `working-directory`.
 
 ## Running the Server
+
+Start the server with `java`: 
 
     java -jar filesharer.jar server
 
@@ -180,13 +225,16 @@ Then create a new one with:
 
 ## Building the Application (Optional)
 
-Since a `.jar` is included with this repository, building is not necessary to run the application. These instructions are provided as an optional step.
+Since a `.jar` is included with this repository, building is not necessary to run the application. These instructions are provided as an optional step. They must be followed locally rather than from within the Docker container, as it does not contain source code.
 
 To build the application, scala (3.1.1) and the scala build tool, sbt (1.6.2), are required. Both of these can be installed by following the official `cs setup` [instructions](https://www.scala-lang.org/download/).
 
-Afterwards, from the top level filesharer directory, build the project and place the `.jar` in `working-directory`.
+Afterwards, from the top level filesharer directory, build the project:
 
     sudo sbt clean assembly
+
+Then place the `.jar` in `working-directory`:
+
     cp target/scala-3.1.1/FileSharer-assembly-0.jar working-directory/filesharer.jar
 
 The new `.jar` can now be used from within `working-directory` as described above.
