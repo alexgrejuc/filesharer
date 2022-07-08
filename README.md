@@ -208,6 +208,6 @@ Although the above examples send client files from [working-directory/client/sto
 The following bash scripts may be useful for evaluation the application, although they are not necessary for doing so:
 
 1. [setup.sh](setup.sh) - creates the working-directory structure (without the gitkeep directory).
-2. [working-directory/test.sh](working-directory/test.sh) - runs the app in typical workflows.
-3. [working-directory/stress-test.sh](working-directory/stress-test.sh) - runs some tests of the app in atypical/incorrect workflows.
-4. [working-directory/clean.sh](working-directory/clean.sh) - removes server files, client's decrypted files, and server logs produced by the above tests.
+2. [test/test.sh](test/test.sh) - runs the app in typical workflows.
+3. [test/stress-test.sh](test/stress-test.sh) - runs some tests of the app in atypical/incorrect workflows.
+4. [test/clean.sh](test/clean.sh) - removes server files, client's decrypted files, and server logs produced by the above tests.
