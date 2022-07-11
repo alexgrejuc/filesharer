@@ -18,9 +18,9 @@ The rest of this README contains the following sections:
      * [The Delete Command](#the-delete-command)
    * [Encryption Overview](#encryption-overview)
  * [Tech Stack](#tech-stack)
+ * [Usage Options and Requirements](#usage-options-and-requirements)
  * [Web Browser Usage Instructions](#web-browser-usage-instructions)
- * [Docker Usage Instruction](#docker-usage-instructions)
- * [Requirements for Running the Application Locally](#requirements-for-running-the-application-locally)
+ * [Docker Usage Instructions](#docker-usage-instructions)
  * [Command Line Usage Instructions](#command-line-usage-instructions)
    * [Running the Server](#running-the-server)
    * [Using the Client](#using-the-client)
@@ -88,9 +88,22 @@ Since CBC does not ensure message integrity, the protocol requires a SHA-256 has
 
 The application is written entirely in Scala. It does not depend on any frameworks or libraries aside from the Scala and Java standard libraries. It uses cryptographic primitives from [javax.crypto](https://docs.oracle.com/javase/8/docs/api/javax/crypto/package-summary.html) and [java.security](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/security/Security.html) as well as a TLS 1.3 implementation from [javax.net.ssl](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/javax/net/ssl/package-summary.html).
 
-# Web Browser Usage Instructions
+# Usage Options and Requirements
 
-The only requirement to use the application via a web browser is a GitHub or Docker account.
+The application can be used in one of three ways:
+
+  1. [Via the Play With Docker web app](#web-browser-usage-instructions)
+       * Only requires a [GitHub](https://github.com/signup) or [Docker](https://hub.docker.com/signup/) account and a web browser
+       * Can only transfer files that are within the Docker container
+       * Recommended for Windows users
+  2. [In a local terminal, via a Docker container](#docker-usage-instructions)
+       * Requires [Docker](https://docs.docker.com/engine/install/)
+       * Can only transfer files that are within the Docker container
+  3. [In a local terminal, via `java` and the `.jar` file](#command-line-usage-instructions)
+       * Requires [JDK 17 or higher](https://www.oracle.com/java/technologies/downloads/#java17)
+       * Can transfer any local files
+
+# Web Browser Usage Instructions
 
  1. Navigate to [Play With Docker](https://labs.play-with-docker.com/) in your web browser.
  2. Click `Login` and proceed with your GitHub or Docker account.
@@ -100,16 +113,16 @@ The only requirement to use the application via a web browser is a GitHub or Doc
  You should see a terminal window in your browser similar to the one below:
 
  ![Play With Docker terminal](documentation/img/play-with-docker.png)
- 
-You can then follow the [Docker Usage Instructions](#docker-usage-instructions) to use the application.
+
+You can then follow the [Docker Usage Instructions](#docker-usage-instructions) to use the application from that terminal window.
 
 # Docker Usage Instructions
 
-These instructions assume you are in an environment where Docker is available (e.g. your local machine or Play with Docker).
+These are command line instructions that assume you are in an environment where Docker is available (e.g. your local machine or Play with Docker).
 
 Pull and run the filesharer docker image in detached mode:
 
-    docker run -d --name filesharer alexgrejuc/filesharer 
+    docker run -d --name filesharer alexgrejuc/filesharer
 
 This will start a container in which the server is running. Next, run a shell within the container:
 
@@ -129,13 +142,9 @@ Then remove it:
 
     docker rm filesharer
 
-# Requirements for Running the Application Locally
-
-A pre-built `.jar` is [included](working-directory/filesharer.jar) in this repository, so the project does not need to be built to use the application. The only requirement to run it locally is JDK 17 or higher. It can be installed with a package manager or by following the instructions [here](https://www.oracle.com/java/technologies/downloads/#java17).
-
 # Command Line Usage Instructions
 
-The following instructions are written with a Unix system in mind, but a reader familiar with the Windows command line should be able to follow along, particularly if using PowerShell, which aliases Unix programs such as `cd`.
+The following instructions are written with a Unix-like system in mind, but a Windows user should be able to follow along with PowerShell.
 
 Assumptions: you have cloned the repository, and you are in the top-level `filesharer` directory.
 
@@ -147,7 +156,7 @@ The following instructions for running the application must be run from `working
 
 ## Running the Server
 
-Start the server with `java`: 
+Start the server with `java`:
 
     java -jar filesharer.jar server
 
@@ -241,7 +250,7 @@ The new `.jar` can now be used from within `working-directory` as described abov
 
 # Configuring the Application
 
-The above instructions require running the application from `working-directory`, although this can be changed by modifying the configuration files. The only restriction is that the server must be run from a directory that contains [server/config/config](working-directory/server/config/config) and the client must be run from a directory that contains [client/config/config](working-directory/client/config/config). 
+The above instructions require running the application from `working-directory`, although this can be changed by modifying the configuration files. The only restriction is that the server must be run from a directory that contains [server/config/config](working-directory/server/config/config) and the client must be run from a directory that contains [client/config/config](working-directory/client/config/config).
 
 Look in [src/main/scala/configuration/Configurator.scala](src/main/scala/configuration/Configurator.scala) for the format of these files.
 
@@ -253,7 +262,7 @@ Although the above examples send client files from [working-directory/client/sto
 
 # Listing of Scripts
 
-The following bash scripts may be useful for evaluation the application, although they are not necessary for doing so:
+The following bash scripts may be useful for locally evaluating the application, although they are not necessary for doing so:
 
 1. [setup.sh](setup.sh) - creates the working-directory structure (without the gitkeep directory).
 2. [test/test.sh](test/test.sh) - runs the app in typical workflows.
